@@ -276,7 +276,11 @@ contract ShardsMarket {
                 msg.sender,
                 p.shardAmount
             );
-            ERC721(p.nft).safeTransferFrom(address(this), msg.sender, _tokenId);
+            ERC721(poolInfo[_tokenId].nft).safeTransferFrom(
+                address(this),
+                msg.sender,
+                _tokenId
+            );
         } else {
             p.passed = false;
             poolInfo[_tokenId].state == ShardsState.BuyoutFailed;
