@@ -33,5 +33,5 @@ interface ISharedToken {
         uint256 value
     ) external returns (bool);
 
-    function initialize(string memory _url) external;
+    function initialize(uint256 _tokenId) external;
 }

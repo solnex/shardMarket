@@ -13,7 +13,7 @@ contract ShardToken is ISharedToken {
     mapping(address => uint256) public override balanceOf;
     mapping(address => mapping(address => uint256)) public override allowance;
 
-    string public url;
+    uint256 public tokenId;
     address public market;
 
     event Approval(
@@ -90,8 +90,12 @@ contract ShardToken is ISharedToken {
         return true;
     }
 
-    function initialize(string memory _url) external override {
+    function burn(address from, uint256 value) external {
+        _burn(from, value);
+    }
+
+    function initialize(uint256 _tokenId) external override {
         require(msg.sender == market, "FORBIDDEN"); // sufficient check
-        url = _url;
+        tokenId = _tokenId;
     }
 }

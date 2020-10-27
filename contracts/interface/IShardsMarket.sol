@@ -62,7 +62,9 @@ interface IShardsMarket {
     function WithdrawAll(string memory url) external;
 
     //散户进行兑换ETH
-    function ExchangeForETH() external;
+    function ExchangeForETH(string memory url, uint256 shardAmount)
+        external
+        returns (uint256 ETHAmount);
 
     //设置碎片创建者占比
     function SetShardsCreatorProportion(uint256 _shardsCreatorProportion)
