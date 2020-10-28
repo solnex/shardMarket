@@ -90,8 +90,12 @@ contract ShardToken is ISharedToken {
         return true;
     }
 
-    function burn(address from, uint256 value) external {
+    function burn(address from, uint256 value) external override {
         _burn(from, value);
+    }
+
+    function mint(address to, uint256 value) external override {
+        _mint(to, value);
     }
 
     function initialize(uint256 _tokenId) external override {

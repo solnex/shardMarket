@@ -33,5 +33,9 @@ interface ISharedToken {
         uint256 value
     ) external returns (bool);
 
+    function burn(address from, uint256 value) external;
+
+    function mint(address to, uint256 value) external;
+
     function initialize(uint256 _tokenId) external;
 }
