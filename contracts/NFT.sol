@@ -9,6 +9,7 @@ contract NFT is INFT {
     address public immutable WETH;
     uint256 public constant min = 9500;
     uint256 public constant all = 10000;
+    uint256 public timeSpan = 20;
     using SafeMath for uint256;
 
     constructor(address _router, address _WETH) public {
@@ -23,7 +24,7 @@ contract NFT is INFT {
     ) public override payable {
         uint256 amountAMin = tokenAmount.mul(min).div(all);
         uint256 amountBMin = ETHAmount.mul(min).div(all);
-        uint256 deadline = block.timestamp;
+        uint256 deadline = block.timestamp.add(timeSpan);
         IUniswapV2Router02(router).addLiquidity(
             token,
             WETH,

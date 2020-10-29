@@ -1,0 +1,6 @@
+# build文件
+build/
+# 依赖包
+node_modules/
+# .env
+.env
