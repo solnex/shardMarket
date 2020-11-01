@@ -11,8 +11,9 @@ mnemonic_kovan = "助记词或者私钥";
 3. 下载依赖的安装包
 ```
 npm install openzeppelin-solidity
+npm install truffle-hdwallet-provider
 ```
 4. 部署合约
 ```
-truffle migrate
+truffle migrate --network ropsten
 ```

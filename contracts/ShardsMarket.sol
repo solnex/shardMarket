@@ -4,14 +4,15 @@ import "./interface/IShardsMarket.sol";
 import "./interface/IWETH.sol";
 import "./interface/ISharedToken.sol";
 import "./interface/IUniswapV2Pair.sol";
-import "./interface/ERC721.sol";
 import "./interface/IUniswapV2Factory.sol";
 import "./SharedToken.sol";
 import "./libraries/TransferHelper.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/token/ERC721/IERC721.sol";
+import "openzeppelin-solidity/contracts/token/ERC721/IERC721Receiver.sol";
 import "./interface/IUniswapV2Router02.sol";
 
-contract ShardsMarket is IShardsMarket {
+contract ShardsMarket is IShardsMarket, IERC721Receiver {
     using SafeMath for uint256;
     //NFT _tokenId
     uint256[] tokenIds;
@@ -122,13 +123,13 @@ contract ShardsMarket is IShardsMarket {
         string memory shardSymbol,
         uint256 minPrice
     ) external override returns (uint256 shardPoolId) {
-        require(ERC721(nft).ownerOf(_tokenId) == msg.sender, "UNAUTHORIZED");
-        ERC721(nft).safeTransferFrom(msg.sender, address(this), _tokenId);
+        require(IERC721(nft).ownerOf(_tokenId) == msg.sender, "UNAUTHORIZED");
+        IERC721(nft).safeTransferFrom(msg.sender, address(this), _tokenId);
         if (shardPoolIdCount == 0) {
             shardPoolIdCount = 1;
         }
         shardPoolId = shardPoolIdCount;
-        poolInfo[_tokenId] = shardPool({
+        poolInfo[shardPoolId] = shardPool({
             creator: msg.sender,
             state: ShardsState.Live,
             createTime: block.timestamp,
@@ -161,9 +162,9 @@ contract ShardsMarket is IShardsMarket {
         override
         payable
     {
+        uint256 createTime = poolInfo[_shardPoolId].createTime;
         require(
-            block.timestamp <=
-                poolInfo[_shardPoolId].createTime.add(deadlineForStaking),
+            block.timestamp <= createTime.add(deadlineForStaking),
             "NFT:EXPIRED"
         );
         require(
@@ -171,14 +172,14 @@ contract ShardsMarket is IShardsMarket {
             "NFT:LIVE STATE IS REQUIRED"
         );
         IWETH(WETH).deposit{value: amount}();
-        assert(IWETH(WETH).transfer(address(this), amount));
-        userInfo[_shardPoolId][msg.sender].amount = userInfo[_shardPoolId][msg
-            .sender]
-            .amount
-            .add(amount);
-        poolInfo[_shardPoolId].balanceOfETH = poolInfo[_shardPoolId]
-            .balanceOfETH
-            .add(amount);
+        // IWETH(WETH).approve(address(this), amount);
+        //assert(IWETH(WETH).transfer(address(this), amount));
+        uint256 userBalance = userInfo[_shardPoolId][msg.sender].amount;
+        uint256 poolBalance = poolInfo[_shardPoolId].balanceOfETH;
+        userInfo[_shardPoolId][msg.sender].amount = userBalance.add(amount);
+        userInfo[_shardPoolId][msg.sender].amount += amount;
+        poolInfo[_shardPoolId].balanceOfETH += amount;
+        poolInfo[_shardPoolId].balanceOfETH = poolBalance.add(amount);
         emit Stake(msg.sender, _shardPoolId, amount);
     }
 
@@ -399,7 +400,7 @@ contract ShardsMarket is IShardsMarket {
                 msg.sender,
                 p.shardAmount
             );
-            ERC721(poolInfo[_shardPoolId].nft).safeTransferFrom(
+            IERC721(poolInfo[_shardPoolId].nft).safeTransferFrom(
                 address(this),
                 msg.sender,
                 _shardPoolId
@@ -511,7 +512,7 @@ contract ShardsMarket is IShardsMarket {
 
     function _failToSetPrice(uint256 _shardPoolId) private {
         poolInfo[_shardPoolId].state = ShardsState.SubscriptionFailed;
-        ERC721(poolInfo[_shardPoolId].nft).safeTransferFrom(
+        IERC721(poolInfo[_shardPoolId].nft).safeTransferFrom(
             address(this),
             poolInfo[_shardPoolId].creator,
             _shardPoolId
@@ -697,5 +698,18 @@ contract ShardsMarket is IShardsMarket {
     {
         _amount = userInfo[_shardPoolId][msg.sender].amount;
         _isWithdrawShard = userInfo[_shardPoolId][msg.sender].isWithdrawShard;
+    }
+
+    function onERC721Received(
+        address _operator,
+        address _from,
+        uint256 _tokenId,
+        bytes calldata _data
+    ) external override returns (bytes4) {
+        _operator;
+        _from;
+        _tokenId;
+        _data;
+        return 0x150b7a02;
     }
 }
