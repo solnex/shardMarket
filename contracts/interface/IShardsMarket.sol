@@ -84,7 +84,7 @@ interface IShardsMarket {
     function stake(uint256 _shardPoolId, uint256 amount) external payable;
 
     //赎回
-    function redeem(uint256 _shardPoolId, uint256 amount) external payable;
+    function redeem(uint256 _shardPoolId, uint256 amount) external;
 
     //认购结算时进行定价
     function settle(uint256 _shardPoolId) external;

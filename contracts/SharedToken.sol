@@ -6,8 +6,8 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 contract ShardToken is ISharedToken {
     using SafeMath for uint256;
 
-    string public constant override name = "NFT V1";
-    string public constant override symbol = "NFT-V1";
+    string public override name = "NFT V1";
+    string public override symbol = "NFT-V1";
     uint8 public constant override decimals = 18;
     uint256 public override totalSupply;
     mapping(address => uint256) public override balanceOf;
@@ -91,15 +91,23 @@ contract ShardToken is ISharedToken {
     }
 
     function burn(address from, uint256 value) external override {
+        require(msg.sender == market, "FORBIDDEN");
         _burn(from, value);
     }
 
     function mint(address to, uint256 value) external override {
+        require(msg.sender == market, "FORBIDDEN");
         _mint(to, value);
     }
 
-    function initialize(uint256 _tokenId) external override {
+    function initialize(
+        uint256 _tokenId,
+        string memory _symbol,
+        string memory _name
+    ) external override {
         require(msg.sender == market, "FORBIDDEN"); // sufficient check
         tokenId = _tokenId;
+        name = _name;
+        symbol = _symbol;
     }
 }

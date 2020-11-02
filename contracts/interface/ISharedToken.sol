@@ -37,5 +37,9 @@ interface ISharedToken {
 
     function mint(address to, uint256 value) external;
 
-    function initialize(uint256 _tokenId) external;
+    function initialize(
+        uint256 _tokenId,
+        string memory _symbol,
+        string memory _name
+    ) external;
 }

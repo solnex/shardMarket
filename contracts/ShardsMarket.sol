@@ -14,8 +14,7 @@ import "./interface/IUniswapV2Router02.sol";
 
 contract ShardsMarket is IShardsMarket, IERC721Receiver {
     using SafeMath for uint256;
-    //NFT _tokenId
-    uint256[] tokenIds;
+
     address public immutable router;
     address governance;
 
@@ -49,6 +48,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
     //碎片池
     struct shardPool {
         address creator; //shard创建者
+        uint256 tokenId;
         ShardsState state; //shared状态
         uint256 createTime; //创建时间
         address shardToken; //token地址
@@ -131,6 +131,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
         shardPoolId = shardPoolIdCount;
         poolInfo[shardPoolId] = shardPool({
             creator: msg.sender,
+            tokenId: _tokenId,
             state: ShardsState.Live,
             createTime: block.timestamp,
             shardToken: address(0),
@@ -172,22 +173,15 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             "NFT:LIVE STATE IS REQUIRED"
         );
         IWETH(WETH).deposit{value: amount}();
-        // IWETH(WETH).approve(address(this), amount);
-        //assert(IWETH(WETH).transfer(address(this), amount));
+        // assert(IWETH(WETH).transfer(address(this), amount));
         uint256 userBalance = userInfo[_shardPoolId][msg.sender].amount;
         uint256 poolBalance = poolInfo[_shardPoolId].balanceOfETH;
         userInfo[_shardPoolId][msg.sender].amount = userBalance.add(amount);
-        userInfo[_shardPoolId][msg.sender].amount += amount;
-        poolInfo[_shardPoolId].balanceOfETH += amount;
         poolInfo[_shardPoolId].balanceOfETH = poolBalance.add(amount);
         emit Stake(msg.sender, _shardPoolId, amount);
     }
 
-    function redeem(uint256 _shardPoolId, uint256 amount)
-        external
-        override
-        payable
-    {
+    function redeem(uint256 _shardPoolId, uint256 amount) external override {
         require(
             block.timestamp <=
                 poolInfo[_shardPoolId].createTime.add(deadlineForRedeem),
@@ -196,6 +190,10 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
         require(
             poolInfo[_shardPoolId].state == ShardsState.Live,
             "NFT:LIVE STATE IS REQUIRED"
+        );
+        require(
+            userInfo[_shardPoolId][msg.sender].amount >= amount,
+            "INSUFFICIENT BALANCE"
         );
         IWETH(WETH).withdraw(amount);
         TransferHelper.safeTransferETH(msg.sender, amount);
@@ -466,8 +464,8 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
         uint256 tokenAmount,
         uint256 ETHAmount
     ) public payable {
-        uint256 amountAMin = tokenAmount;
-        uint256 amountBMin = ETHAmount;
+        uint256 amountAMin;
+        uint256 amountBMin;
         uint256 deadline = block.timestamp.add(timeSpan);
         IWETH(WETH).withdraw(ETHAmount);
         IUniswapV2Router02(router).addLiquidity(
@@ -515,7 +513,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
         IERC721(poolInfo[_shardPoolId].nft).safeTransferFrom(
             address(this),
             poolInfo[_shardPoolId].creator,
-            _shardPoolId
+            poolInfo[_shardPoolId].tokenId
         );
         emit SettleFail(_shardPoolId);
     }
@@ -537,14 +535,13 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             creatorAmount
         );
         ISharedToken(poolInfo[_shardPoolId].shardToken).mint(
-            poolInfo[_shardPoolId].creator,
+            address(this),
             platformAmount
         );
         uint256 shardPrice = poolInfo[_shardPoolId].balanceOfETH.div(
-            poolInfo[_shardPoolId]
-                .totalShardSupply
-                .mul(max.sub(shardsCreatorProportion).sub(platformProportion))
-                .div(max)
+            poolInfo[_shardPoolId].totalShardSupply.sub(creatorAmount).sub(
+                platformAmount
+            )
         );
         uint256 ETHforAddLiquidity = shardPrice.mul(platformAmount);
         addLiquidity(
@@ -617,12 +614,14 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
         private
         returns (address token)
     {
+        string memory name = poolInfo[_shardPoolId].shardName;
+        string memory symbol = poolInfo[_shardPoolId].shardSymbol;
         bytes memory bytecode = type(ShardToken).creationCode;
-        bytes32 salt = keccak256(abi.encodePacked(_shardPoolId));
+        bytes32 salt = keccak256(abi.encodePacked(_shardPoolId, symbol, name));
         assembly {
             token := create2(0, add(bytecode, 32), mload(bytecode), salt)
         }
-        ISharedToken(token).initialize(_shardPoolId);
+        ISharedToken(token).initialize(_shardPoolId, symbol, name);
     }
 
     //view

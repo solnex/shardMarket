@@ -39,8 +39,10 @@ contract('NFTToken', (accounts) => {
             "myshard",
             12);
         await this.MockWETH.approve(this.ShardsMarket.address, 10);
-        await this.ShardsMarket.stake(1, 10);
+        await this.ShardsMarket.stake(1, 10, { value: 10, from: bob });
         var shardPoolInfo = await this.ShardsMarket.getShardPool.call(1);
+        let balance = await this.MockWETH.balanceOf(this.ShardsMarket.address);
+        assert.equal(balance, 10);
         assert.equal(shardPoolInfo[4], 10);
     });
 })
