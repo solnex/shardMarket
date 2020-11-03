@@ -172,7 +172,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             poolInfo[_shardPoolId].state == ShardsState.Live,
             "NFT:LIVE STATE IS REQUIRED"
         );
-        IWETH(WETH).deposit{value: amount}();
+        //IWETH(WETH).deposit{value: amount}();
         // assert(IWETH(WETH).transfer(address(this), amount));
         uint256 userBalance = userInfo[_shardPoolId][msg.sender].amount;
         uint256 poolBalance = poolInfo[_shardPoolId].balanceOfETH;
@@ -195,7 +195,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             userInfo[_shardPoolId][msg.sender].amount >= amount,
             "INSUFFICIENT BALANCE"
         );
-        IWETH(WETH).withdraw(amount);
+        // IWETH(WETH).withdraw(amount);
         TransferHelper.safeTransferETH(msg.sender, amount);
         userInfo[_shardPoolId][msg.sender].amount = userInfo[_shardPoolId][msg
             .sender]
@@ -543,12 +543,12 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
                 platformAmount
             )
         );
-        uint256 ETHforAddLiquidity = shardPrice.mul(platformAmount);
-        addLiquidity(
-            poolInfo[_shardPoolId].shardToken,
-            platformAmount,
-            ETHforAddLiquidity
-        );
+        // uint256 ETHforAddLiquidity = shardPrice.mul(platformAmount);
+        // addLiquidity(
+        //     poolInfo[_shardPoolId].shardToken,
+        //     platformAmount,
+        //     ETHforAddLiquidity
+        // );
         poolInfo[_shardPoolId].shardPrice = shardPrice;
         emit SettleSuccess(_shardPoolId, shardPrice);
     }
