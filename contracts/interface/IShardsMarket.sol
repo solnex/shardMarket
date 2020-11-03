@@ -44,7 +44,8 @@ interface IShardsMarket {
         string shardSymbol,
         uint256 minPrice,
         uint256 createTime,
-        uint256 totalSupply
+        uint256 totalSupply,
+        address wantToken
     );
     event Stake(address indexed sender, uint256 shardPoolId, uint256 amount);
     event Redeem(address indexed sender, uint256 shardPoolId, uint256 amount);
@@ -77,11 +78,14 @@ interface IShardsMarket {
         uint256 _tokenId,
         string memory shardName,
         string memory shardSymbol,
-        uint256 minPrice
+        uint256 minPrice,
+        address wantToken
     ) external returns (uint256 shardPoolId);
 
     //认购
-    function stake(uint256 _shardPoolId, uint256 amount) external payable;
+    function stakeETH(uint256 _shardPoolId) external payable;
+
+    function stake(uint256 _shardPoolId, uint256 amount) external;
 
     //赎回
     function redeem(uint256 _shardPoolId, uint256 amount) external;
@@ -96,7 +100,7 @@ interface IShardsMarket {
     function usersWithdrawShardToken(uint256 _shardPoolId) external;
 
     //成功定价后创建者提取ETH
-    function creatorWithdrawETH(uint256 _shardPoolId) external;
+    function creatorWithdrawWantToken(uint256 _shardPoolId) external;
 
     //申请买断
     function buyOut(uint256 _shardPoolId, uint256 ETHAmount)
@@ -114,7 +118,6 @@ interface IShardsMarket {
     //散户进行兑换ETH
     function exchangeForETH(uint256 _shardPoolId, uint256 shardAmount)
         external
-        payable
         returns (uint256 ETHAmount);
 
     //买断投票失败后取回质押的shard和eth
@@ -142,41 +145,5 @@ interface IShardsMarket {
 
     function setDeadlineForStaking(uint256 _deadlineForStaking) external;
 
-    //view
-    function getShardPool(uint256 _shardPoolId)
-        external
-        view
-        returns (
-            address creator, //shard创建者
-            ShardsState state, //shared状态
-            uint256 createTime, //创建时间
-            address shardToken, //token地址
-            uint256 balanceOfETH, //pool抵押总量
-            string memory shardName,
-            string memory shardSymbol,
-            uint256 minPrice,
-            uint256 totalShardSupply,
-            uint256 shardPrice,
-            bool isCreatorWithDraw
-        );
-
     function getAllPools() external view returns (uint256[] memory _pools);
-
-    function getProposalState(uint256 _shardPoolId)
-        external
-        view
-        returns (
-            uint256 _votesReceived,
-            uint256 _voteTotal,
-            bool _passed,
-            address _submitter,
-            uint256 _voteDeadline,
-            uint256 _shardAmount,
-            uint256 _ETHAmount
-        );
-
-    function getUserInfo(uint256 _shardPoolId)
-        external
-        view
-        returns (uint256 _amount, bool _isWithdrawShard);
 }
