@@ -2,7 +2,7 @@ pragma solidity 0.6.12;
 
 import "./interface/IShardsMarket.sol";
 import "./interface/IWETH.sol";
-import "./interface/ISharedToken.sol";
+import "./interface/IShardToken.sol";
 import "./interface/IUniswapV2Pair.sol";
 import "./interface/IUniswapV2Factory.sol";
 import "./SharedToken.sol";
@@ -133,10 +133,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
     ) external override returns (uint256 shardPoolId) {
         require(IERC721(nft).ownerOf(_tokenId) == msg.sender, "UNAUTHORIZED");
         IERC721(nft).safeTransferFrom(msg.sender, address(this), _tokenId);
-        if (shardPoolIdCount == 0) {
-            shardPoolIdCount = 1;
-        }
-        shardPoolId = shardPoolIdCount;
+        shardPoolId = shardPoolIdCount.add(1);
         poolInfo[shardPoolId] = shardPool({
             creator: msg.sender,
             tokenId: _tokenId,
@@ -155,8 +152,8 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             shardName: shardName,
             shardSymbol: shardSymbol
         });
-        allPools.push(shardPoolIdCount);
-        shardPoolIdCount = shardPoolIdCount.add(1);
+        allPools.push(shardPoolId);
+        shardPoolIdCount = shardPoolId;
         emit SharedCreated(
             msg.sender,
             nft,
@@ -300,7 +297,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             totalBalance
         );
         userInfo[_shardPoolId][msg.sender].isWithdrawShard = true;
-        ISharedToken(poolInfo[_shardPoolId].shardToken).mint(
+        IShardToken(poolInfo[_shardPoolId].shardToken).mint(
             msg.sender,
             shardAmount
         );
@@ -317,28 +314,17 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
 
         require(!poolInfo[_shardPoolId].isCreatorWithDraw, "ALREADY WITHDRAW");
         uint256 totalBalance = poolInfo[_shardPoolId].balanceOfWantToken;
-        uint256 platformAmount = ISharedToken(shardToken).balanceOf(
-            address(this)
-        );
+        uint256 platformAmount = poolInfo[_shardPoolId]
+            .totalShardSupply
+            .mul(decimals)
+            .mul(platformProportion)
+            .div(max);
         uint256 fee = poolInfo[_shardPoolId].shardPrice.mul(platformAmount).div(
             decimals
         );
         uint256 amount = totalBalance.sub(fee);
         poolInfo[_shardPoolId].isCreatorWithDraw = true;
         IERC20(wantToken).transfer(msg.sender, amount);
-
-        IERC20(shardToken).approve(router, platformAmount);
-        IERC20(wantToken).approve(router, fee);
-        IUniswapV2Router02(router).addLiquidity(
-            shardToken,
-            wantToken,
-            platformAmount,
-            fee,
-            0,
-            0,
-            address(this),
-            now.add(timeSpan)
-        );
     }
 
     function applyforBuyout(uint256 _shardPoolId, uint256 wantTokenAmount)
@@ -347,26 +333,28 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
         lock
         returns (uint256 proposalId)
     {
-        uint256 shardBalance = ISharedToken(poolInfo[_shardPoolId].shardToken)
+        uint256 shardBalance = IShardToken(poolInfo[_shardPoolId].shardToken)
             .balanceOf(msg.sender);
         uint256 supply = poolInfo[_shardPoolId].totalShardSupply;
         require(
-            shardBalance >= supply.mul(buyOutProportion).div(max),
+            shardBalance >= supply.mul(decimals).mul(buyOutProportion).div(max),
             "INSUFFIENT BALANCE"
         );
         require(
-            poolInfo[_shardPoolId].state == ShardsState.Live,
-            "LIVE STATE IS REQUIRED"
+            poolInfo[_shardPoolId].state == ShardsState.Listed,
+            "LISTED STATE IS REQUIRED"
         );
         uint256 currentPrice = getPrice(_shardPoolId);
         require(
             wantTokenAmount >=
-                max.sub(buyOutProportion).mul(supply).mul(currentPrice),
+                supply.mul(decimals).sub(shardBalance).mul(currentPrice).div(
+                    decimals
+                ),
             "INSUFFICIENT wantTokenAmount"
         );
 
         TransferHelper.safeTransferFrom(
-            WETH,
+            poolInfo[_shardPoolId].wantToken,
             msg.sender,
             address(this),
             wantTokenAmount
@@ -377,10 +365,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             address(this),
             shardBalance
         );
-        if (proposolIdCount == 0) {
-            proposolIdCount = 1;
-        }
-        proposalId = proposolIdCount;
+        proposalId = proposolIdCount.add(1);
         proposalIds[_shardPoolId] = proposalId;
         proposals[proposalId] = Proposal({
             votesReceived: 0,
@@ -394,8 +379,8 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
 
         blocked[poolInfo[_shardPoolId].shardToken][msg.sender] = proposalId;
         voted[proposalId][msg.sender] = true;
-        proposolIdCount = proposolIdCount.add(1);
-        poolInfo[_shardPoolId].state == ShardsState.ApplyforBuyout;
+        proposolIdCount = proposalId;
+        poolInfo[_shardPoolId].state = ShardsState.ApplyforBuyout;
         emit ApplyforBuyout(
             msg.sender,
             proposalId,
@@ -407,7 +392,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
     }
 
     function vote(uint256 _shardPoolId, bool isAgree) external override {
-        uint256 balance = ISharedToken(poolInfo[_shardPoolId].shardToken)
+        uint256 balance = IShardToken(poolInfo[_shardPoolId].shardToken)
             .balanceOf(msg.sender);
         require(balance >= 0, "INSUFFICIENT VOTERIGHT");
         require(
@@ -415,16 +400,24 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             "WRONG STATE"
         );
         uint256 proposalId = proposalIds[_shardPoolId];
-        Proposal memory p = proposals[proposalId];
-        require(block.timestamp <= p.voteDeadline, "EXPIRED");
+        require(
+            block.timestamp <= proposals[proposalId].voteDeadline,
+            "EXPIRED"
+        );
         require(voted[proposalId][msg.sender] == false);
         blocked[poolInfo[_shardPoolId].shardToken][msg.sender] = proposalId;
         voted[proposalId][msg.sender] == true;
         if (isAgree) {
-            p.votesReceived = p.votesReceived.add(balance);
-            p.voteTotal = p.voteTotal.add(balance);
+            proposals[proposalId].votesReceived = proposals[proposalId]
+                .votesReceived
+                .add(balance);
+            proposals[proposalId].voteTotal = proposals[proposalId]
+                .voteTotal
+                .add(balance);
         } else {
-            p.voteTotal = p.voteTotal.add(balance);
+            proposals[proposalId].voteTotal = proposals[proposalId]
+                .voteTotal
+                .add(balance);
         }
         emit Vote(msg.sender, proposalId, _shardPoolId, isAgree, balance);
     }
@@ -435,32 +428,41 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
         returns (bool result)
     {
         uint256 proposalId = proposalIds[_shardPoolId];
-        Proposal memory p = proposals[proposalId];
-        require(msg.sender == p.submitter, "UNAUTHORIZED");
-        require(block.timestamp >= p.voteDeadline, "NOT READY");
+        require(msg.sender == proposals[proposalId].submitter, "UNAUTHORIZED");
+        require(
+            block.timestamp >= proposals[proposalId].voteDeadline,
+            "NOT READY"
+        );
         require(
             poolInfo[_shardPoolId].state == ShardsState.ApplyforBuyout,
             "WRONG STATE"
         );
-        if (p.votesReceived >= p.voteTotal.mul(passNeeded).div(max)) {
-            p.passed = true;
+        if (
+            proposals[proposalId].votesReceived >=
+            proposals[proposalId].voteTotal.mul(passNeeded).div(max)
+        ) {
+            proposals[proposalId].passed = true;
             result = true;
-            poolInfo[_shardPoolId].state == ShardsState.Buyout;
-            ShardToken(poolInfo[_shardPoolId].shardToken).burn(
-                msg.sender,
-                p.shardAmount
+            poolInfo[_shardPoolId].state = ShardsState.Buyout;
+            IShardToken(poolInfo[_shardPoolId].shardToken).burn(
+                address(this),
+                proposals[proposalId].shardAmount
             );
             IERC721(poolInfo[_shardPoolId].nft).safeTransferFrom(
                 address(this),
                 msg.sender,
-                _shardPoolId
+                poolInfo[_shardPoolId].tokenId
             );
         } else {
-            p.passed = false;
+            proposals[proposalId].passed = false;
             result = false;
-            poolInfo[_shardPoolId].state == ShardsState.BuyoutFailed;
+            poolInfo[_shardPoolId].state = ShardsState.BuyoutFailed;
         }
-        emit VoteResultComfirm(proposalId, _shardPoolId, p.passed);
+        emit VoteResultComfirm(
+            proposalId,
+            _shardPoolId,
+            proposals[proposalId].passed
+        );
     }
 
     function exchangeForWantToken(uint256 _shardPoolId, uint256 shardAmount)
@@ -474,17 +476,25 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             poolInfo[_shardPoolId].state == ShardsState.Buyout,
             "WRONG STATE"
         );
-
-        ShardToken(poolInfo[_shardPoolId].shardToken).burn(
+        TransferHelper.safeTransferFrom(
+            poolInfo[_shardPoolId].shardToken,
             msg.sender,
+            address(this),
             shardAmount
         );
-        uint256 supply = poolInfo[_shardPoolId].totalShardSupply;
-        uint256 amount = shardAmount.mul(p.wantTokenAmount).div(
+        ShardToken(poolInfo[_shardPoolId].shardToken).burn(
+            address(this),
+            shardAmount
+        );
+        uint256 supply = poolInfo[_shardPoolId].totalShardSupply.mul(decimals);
+        wantTokenAmount = shardAmount.mul(p.wantTokenAmount).div(
             supply.sub(p.shardAmount)
         );
-        IWETH(WETH).withdraw(amount);
-        TransferHelper.safeTransferETH(msg.sender, amount);
+        TransferHelper.safeTransfer(
+            poolInfo[_shardPoolId].wantToken,
+            msg.sender,
+            wantTokenAmount
+        );
     }
 
     function redeemForBuyOutFailed(uint256 _shardPoolId)
@@ -505,9 +515,13 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             msg.sender,
             p.shardAmount
         );
-        TransferHelper.safeTransferETH(msg.sender, p.wantTokenAmount);
+        TransferHelper.safeTransfer(
+            poolInfo[_shardPoolId].wantToken,
+            msg.sender,
+            p.wantTokenAmount
+        );
 
-        poolInfo[_shardPoolId].state == ShardsState.Live;
+        poolInfo[_shardPoolId].state = ShardsState.Listed;
     }
 
     function addLiquidity(
@@ -554,12 +568,13 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
     }
 
     function getPrice(uint256 _shardPoolId)
-        internal
+        public
+        view
         returns (uint256 currentPrice)
     {
         address lPTokenAddress = IUniswapV2Factory(factory).getPair(
             poolInfo[_shardPoolId].shardToken,
-            WETH
+            poolInfo[_shardPoolId].wantToken
         );
         (uint112 _reserve0, uint112 _reserve1, ) = IUniswapV2Pair(
             lPTokenAddress
@@ -579,9 +594,10 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
     }
 
     function _successToSetPrice(uint256 _shardPoolId) private {
-        poolInfo[_shardPoolId].shardToken = _deployShardsToken(_shardPoolId);
+        address shardToken = _deployShardsToken(_shardPoolId);
         poolInfo[_shardPoolId].state = ShardsState.Listed;
-
+        poolInfo[_shardPoolId].shardToken = shardToken;
+        address wantToken = poolInfo[_shardPoolId].wantToken;
         uint256 creatorAmount = poolInfo[_shardPoolId]
             .totalShardSupply
             .mul(decimals)
@@ -592,27 +608,35 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             .mul(decimals)
             .mul(platformProportion)
             .div(max);
-        ISharedToken(poolInfo[_shardPoolId].shardToken).mint(
+        IShardToken(shardToken).mint(
             poolInfo[_shardPoolId].creator,
             creatorAmount
         );
-        ISharedToken(poolInfo[_shardPoolId].shardToken).mint(
-            address(this),
-            platformAmount
-        );
+        IShardToken(shardToken).mint(address(this), platformAmount);
         uint256 shardPrice = poolInfo[_shardPoolId].balanceOfWantToken.div(
             poolInfo[_shardPoolId]
                 .totalShardSupply
                 .sub(creatorAmount.div(decimals))
                 .sub(platformAmount.div(decimals))
         );
-        // uint256 ETHforAddLiquidity = shardPrice.mul(platformAmount);
-        // addLiquidity(
-        //     poolInfo[_shardPoolId].shardToken,
-        //     platformAmount,
-        //     ETHforAddLiquidity
-        // );
         poolInfo[_shardPoolId].shardPrice = shardPrice;
+        uint256 fee = poolInfo[_shardPoolId].shardPrice.mul(platformAmount).div(
+            decimals
+        );
+        //addLiquidity
+        IERC20(shardToken).approve(router, platformAmount);
+        IERC20(wantToken).approve(router, fee);
+        IUniswapV2Router02(router).addLiquidity(
+            shardToken,
+            wantToken,
+            platformAmount,
+            fee,
+            0,
+            0,
+            address(this),
+            now.add(timeSpan)
+        );
+
         emit SettleSuccess(_shardPoolId, shardPrice);
     }
 
@@ -684,21 +708,16 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
         assembly {
             token := create2(0, add(bytecode, 32), mload(bytecode), salt)
         }
-        ISharedToken(token).initialize(
+        IShardToken(token).initialize(
             poolInfo[_shardPoolId].tokenId,
             symbol,
             name
         );
     }
 
-    // function getAllPools()
-    //     external
-    //     override
-    //     view
-    //     returns (uint256[] memory _pools)
-    // {
-    //     _pools = allPools;
-    // }
+    function getAllPools() external view returns (uint256[] memory _pools) {
+        _pools = allPools;
+    }
 
     function onERC721Received(
         address _operator,

@@ -1,9 +1,9 @@
 pragma solidity 0.6.12;
 
-import "./interface/ISharedToken.sol";
+import "./interface/IShardToken.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
-contract ShardToken is ISharedToken {
+contract ShardToken is IShardToken {
     using SafeMath for uint256;
 
     string public override name = "NFT V1";

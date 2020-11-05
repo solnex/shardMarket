@@ -1,6 +1,6 @@
 pragma solidity 0.6.12;
 
-interface ISharedToken {
+interface IShardToken {
     event Approval(
         address indexed owner,
         address indexed spender,
