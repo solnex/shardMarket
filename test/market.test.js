@@ -2,6 +2,8 @@
 const NFTToken = artifacts.require('NFTToken');
 const MockWETH = artifacts.require('MockWETH');
 const ShardsMarket = artifacts.require('ShardsMarket');
+const MockFactory = artifacts.require('MockFactory');
+const Router = artifacts.require('UniswapV2Router02');
 
 
 contract('NFTToken', (accounts) => {
@@ -9,7 +11,10 @@ contract('NFTToken', (accounts) => {
     beforeEach(async () => {
         this.NFTToken = await NFTToken.new("NFT", "NFT", { from: bob });
         this.MockWETH = await MockWETH.new({ from: bob });
-        this.ShardsMarket = await ShardsMarket.new(this.MockWETH.address, bob, bob, bob, { from: bob, gas: 6000000 });
+        this.MockFactory = await MockFactory.new(bob, { from: bob, gas: 6000000 });
+        this.Router = await Router.new(this.MockFactory.address, this.MockWETH.address, { from: bob, gas: 6000000 });
+        this.ShardsMarket = await ShardsMarket.new(this.MockWETH.address, this.MockFactory.address, bob, this.Router.address, { from: bob, gas: 6000000 });
+
         //  this.ShardsMarket = await ShardsMarket.new(accounts[0], accounts[0], accounts[0], accounts[0], { from: accounts[0] });
     });
     it('NFTToken mint works', async () => {
@@ -146,7 +151,7 @@ contract('NFTToken', (accounts) => {
     it('settle success works', async () => {
         await this.NFTToken.mint(100);
         await this.NFTToken.approve(this.ShardsMarket.address, 100);
-        let amount = "10000000000000000000";
+        let amount = "1000000000000000000";
         await this.ShardsMarket.createShared(this.NFTToken.address,
             100,
             "myshard",
@@ -158,12 +163,15 @@ contract('NFTToken', (accounts) => {
         await this.ShardsMarket.settle(1, { from: bob, gas: 6000000 });
         var shardPoolInfoAfter = await this.ShardsMarket.poolInfo.call(1);
         assert.equal(shardPoolInfoAfter[2], 1);//state
+        var shardBalance = await this.ShardsMarket.getShardBalance.call(shardPoolInfoAfter[4], bob);
+        assert.equal(shardPoolInfoAfter[9], 1111111111111111); //shardPrice
+        assert.equal(shardBalance, 500 * 1e18);
     });
 
-    it('settle success works', async () => {
+    it('creatorWithdrawWantToken  works', async () => {
         await this.NFTToken.mint(100);
         await this.NFTToken.approve(this.ShardsMarket.address, 100);
-        let amount = "10000000000000000000";
+        let amount = "1000000000000000000";
         await this.ShardsMarket.createShared(this.NFTToken.address,
             100,
             "myshard",
@@ -175,6 +183,10 @@ contract('NFTToken', (accounts) => {
         await this.ShardsMarket.settle(1, { from: bob, gas: 6000000 });
         var shardPoolInfoAfter = await this.ShardsMarket.poolInfo.call(1);
         assert.equal(shardPoolInfoAfter[2], 1);//state
+        await this.ShardsMarket.creatorWithdrawWantToken(1, { gas: 6000000 });
+        var userBalanceAfter = await this.MockWETH.balanceOf(bob);
+        amountExpect = "944444444444444500";
+        assert.equal(userBalanceAfter, amountExpect);
     });
 
 

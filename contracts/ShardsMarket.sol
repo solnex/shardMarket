@@ -20,6 +20,8 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
     address governance;
 
     address factory;
+
+    uint256 public constant decimals = 1e18;
     //市场的碎片总供应量
     uint256 public override totalSupply = 10000;
 
@@ -107,7 +109,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
         unlocked = 1;
     }
 
-    uint256 private timeSpan = 20;
+    uint256 private timeSpan = 60;
 
     constructor(
         address _WETH,
@@ -289,6 +291,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
         require(userBanlance > 0 && !isWithdrawShard, "INSUFFIENT BALANCE");
         uint256 shardsForUsers = poolInfo[_shardPoolId]
             .totalShardSupply
+            .mul(decimals)
             .mul(max.sub(shardsCreatorProportion).sub(platformProportion))
             .div(max);
         uint256 totalBalance = poolInfo[_shardPoolId].balanceOfWantToken;
@@ -309,17 +312,36 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             poolInfo[_shardPoolId].state == ShardsState.Listed,
             "WRONG_STATE"
         );
+        address shardToken = poolInfo[_shardPoolId].shardToken;
+        address wantToken = poolInfo[_shardPoolId].wantToken;
+
         require(!poolInfo[_shardPoolId].isCreatorWithDraw, "ALREADY WITHDRAW");
         uint256 totalBalance = poolInfo[_shardPoolId].balanceOfWantToken;
-        uint256 platformAmount = ISharedToken(poolInfo[_shardPoolId].shardToken)
-            .balanceOf(address(this));
-        uint256 fee = poolInfo[_shardPoolId].shardPrice.mul(platformAmount);
+        uint256 platformAmount = ISharedToken(shardToken).balanceOf(
+            address(this)
+        );
+        uint256 fee = poolInfo[_shardPoolId].shardPrice.mul(platformAmount).div(
+            decimals
+        );
         uint256 amount = totalBalance.sub(fee);
         poolInfo[_shardPoolId].isCreatorWithDraw = true;
-        IERC20(poolInfo[_shardPoolId].wantToken).transfer(msg.sender, amount);
+        IERC20(wantToken).transfer(msg.sender, amount);
+
+        IERC20(shardToken).approve(router, platformAmount);
+        IERC20(wantToken).approve(router, fee);
+        IUniswapV2Router02(router).addLiquidity(
+            shardToken,
+            wantToken,
+            platformAmount,
+            fee,
+            0,
+            0,
+            address(this),
+            now.add(timeSpan)
+        );
     }
 
-    function buyOut(uint256 _shardPoolId, uint256 wantTokenAmount)
+    function applyforBuyout(uint256 _shardPoolId, uint256 wantTokenAmount)
         external
         override
         lock
@@ -374,7 +396,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
         voted[proposalId][msg.sender] = true;
         proposolIdCount = proposolIdCount.add(1);
         poolInfo[_shardPoolId].state == ShardsState.ApplyforBuyout;
-        emit BuyOut(
+        emit ApplyforBuyout(
             msg.sender,
             proposalId,
             _shardPoolId,
@@ -441,7 +463,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
         emit VoteResultComfirm(proposalId, _shardPoolId, p.passed);
     }
 
-    function exchangeForETH(uint256 _shardPoolId, uint256 shardAmount)
+    function exchangeForWantToken(uint256 _shardPoolId, uint256 shardAmount)
         external
         override
         returns (uint256 wantTokenAmount)
@@ -509,6 +531,15 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
         );
     }
 
+    //for test
+    function getShardBalance(address shardToken, address user)
+        public
+        view
+        returns (uint256 balance)
+    {
+        balance = ShardToken(shardToken).balanceOf(user);
+    }
+
     function quote(
         uint256 amountA,
         uint256 reserveA,
@@ -553,10 +584,12 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
 
         uint256 creatorAmount = poolInfo[_shardPoolId]
             .totalShardSupply
+            .mul(decimals)
             .mul(shardsCreatorProportion)
             .div(max);
         uint256 platformAmount = poolInfo[_shardPoolId]
             .totalShardSupply
+            .mul(decimals)
             .mul(platformProportion)
             .div(max);
         ISharedToken(poolInfo[_shardPoolId].shardToken).mint(
@@ -568,9 +601,10 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             platformAmount
         );
         uint256 shardPrice = poolInfo[_shardPoolId].balanceOfWantToken.div(
-            poolInfo[_shardPoolId].totalShardSupply.sub(creatorAmount).sub(
-                platformAmount
-            )
+            poolInfo[_shardPoolId]
+                .totalShardSupply
+                .sub(creatorAmount.div(decimals))
+                .sub(platformAmount.div(decimals))
         );
         // uint256 ETHforAddLiquidity = shardPrice.mul(platformAmount);
         // addLiquidity(
@@ -657,14 +691,14 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
         );
     }
 
-    function getAllPools()
-        external
-        override
-        view
-        returns (uint256[] memory _pools)
-    {
-        _pools = allPools;
-    }
+    // function getAllPools()
+    //     external
+    //     override
+    //     view
+    //     returns (uint256[] memory _pools)
+    // {
+    //     _pools = allPools;
+    // }
 
     function onERC721Received(
         address _operator,

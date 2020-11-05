@@ -51,12 +51,12 @@ interface IShardsMarket {
     event Redeem(address indexed sender, uint256 shardPoolId, uint256 amount);
     event SettleSuccess(uint256 indexed shardPoolId, uint256 shardPrice);
     event SettleFail(uint256 indexed shardPoolId);
-    event BuyOut(
+    event ApplyforBuyout(
         address indexed sender,
         uint256 indexed proposalId,
         uint256 indexed _shardPoolId,
         uint256 shardAmount,
-        uint256 ETHAmount,
+        uint256 wantTokenAmount,
         uint256 voteDeadline
     );
     event Vote(
@@ -93,17 +93,17 @@ interface IShardsMarket {
     //认购结算时进行定价
     function settle(uint256 _shardPoolId) external;
 
-    //碎片化失败后用户赎回抵押的ETH
+    //碎片化失败后用户赎回抵押的wantToken
     function redeemInSubscriptionFailed(uint256 _shardPoolId) external;
 
     //成功定价后用户提取shardToken
     function usersWithdrawShardToken(uint256 _shardPoolId) external;
 
-    //成功定价后创建者提取ETH
+    //成功定价后创建者提取wantToken
     function creatorWithdrawWantToken(uint256 _shardPoolId) external;
 
     //申请买断
-    function buyOut(uint256 _shardPoolId, uint256 ETHAmount)
+    function applyforBuyout(uint256 _shardPoolId, uint256 wantTokenAmount)
         external
         returns (uint256 proposalId);
 
@@ -115,15 +115,15 @@ interface IShardsMarket {
         external
         returns (bool result);
 
-    //散户进行兑换ETH
-    function exchangeForETH(uint256 _shardPoolId, uint256 shardAmount)
+    //散户进行兑换wantToken
+    function exchangeForWantToken(uint256 _shardPoolId, uint256 shardAmount)
         external
-        returns (uint256 ETHAmount);
+        returns (uint256 wantTokenAmount);
 
-    //买断投票失败后取回质押的shard和eth
+    //买断投票失败后取回质押的shard和wantToken
     function redeemForBuyOutFailed(uint256 _shardPoolId)
         external
-        returns (uint256 shardTokenAmount, uint256 ETHAmount);
+        returns (uint256 shardTokenAmount, uint256 wantTokenAmount);
 
     //设置碎片创建者占比
     function setShardsCreatorProportion(uint256 _shardsCreatorProportion)
@@ -145,5 +145,5 @@ interface IShardsMarket {
 
     function setDeadlineForStaking(uint256 _deadlineForStaking) external;
 
-    function getAllPools() external view returns (uint256[] memory _pools);
+    // function getAllPools() external view returns (uint256[] memory _pools);
 }
