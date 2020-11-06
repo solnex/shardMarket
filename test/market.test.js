@@ -47,8 +47,6 @@ contract('NFTToken', (accounts) => {
             "myshard",
             12,
             this.MockWETH.address);
-        let owner = await this.NFTToken.ownerOf(100);
-        assert.equal(owner, this.ShardsMarket.address);
         var shardPoolInfo = await this.ShardsMarket.poolInfo.call(1);
         assert.equal(shardPoolInfo[0], bob);
     });
@@ -68,7 +66,7 @@ contract('NFTToken', (accounts) => {
         assert.equal(balance, 10);
 
         var shardPoolInfo = await this.ShardsMarket.poolInfo.call(1);
-        assert.equal(shardPoolInfo[5], 10);
+        assert.equal(shardPoolInfo[6], 10);
 
         var userInfo = await this.ShardsMarket.userInfo.call(1, bob);
         assert.equal(userInfo[0], 10);
@@ -81,7 +79,7 @@ contract('NFTToken', (accounts) => {
         assert.equal(balance, 20);
 
         shardPoolInfo = await this.ShardsMarket.poolInfo.call(1);
-        assert.equal(shardPoolInfo[5], 20);
+        assert.equal(shardPoolInfo[6], 20);
 
         userInfo = await this.ShardsMarket.userInfo.call(1, bob);
         assert.equal(userInfo[0], 20);
@@ -100,7 +98,7 @@ contract('NFTToken', (accounts) => {
         var balanceBefore = await this.MockWETH.balanceOf(this.ShardsMarket.address);
         assert.equal(balanceBefore, 10);
         var shardPoolInfoBefore = await this.ShardsMarket.poolInfo.call(1);
-        assert.equal(shardPoolInfoBefore[5], 10);//balanceOfWantToken
+        assert.equal(shardPoolInfoBefore[6], 10);//balanceOfWantToken
         var userInfoBefore = await this.ShardsMarket.userInfo.call(1, bob);
         assert.equal(userInfoBefore[0], 10);
 
@@ -109,7 +107,7 @@ contract('NFTToken', (accounts) => {
         var balanceAfter = await this.MockWETH.balanceOf(this.ShardsMarket.address);
         assert.equal(balanceAfter, 5);
         var shardPoolInfoAfter = await this.ShardsMarket.poolInfo.call(1);
-        assert.equal(shardPoolInfoAfter[5], 5);
+        assert.equal(shardPoolInfoAfter[6], 5);
         var userInfoAfter = await this.ShardsMarket.userInfo.call(1, bob);
         assert.equal(userInfoAfter[0], 5);
 
@@ -126,18 +124,15 @@ contract('NFTToken', (accounts) => {
             12,
             this.MockWETH.address);
         await this.ShardsMarket.stakeETH(1, { value: 10, from: bob });
-        await this.ShardsMarket.setDeadlineForRedeem(0);
 
-        let ownerBefore = await this.NFTToken.ownerOf(100);
-        assert.equal(ownerBefore, this.ShardsMarket.address);
+        deadlineForRedeem = 604800 + 20;
+        await mine(deadlineForRedeem); //skip to  deadlineForRedeem
 
         await this.ShardsMarket.settle(1);
 
         var shardPoolInfoAfter = await this.ShardsMarket.poolInfo.call(1);
         assert.equal(shardPoolInfoAfter[2], 5);//state
 
-        let ownerAfter = await this.NFTToken.ownerOf(100);
-        assert.equal(ownerAfter, bob);
     });
     it('redeemInSubscriptionFailed works', async () => {
         await this.NFTToken.mint(100);
@@ -149,7 +144,8 @@ contract('NFTToken', (accounts) => {
             12,
             this.MockWETH.address);
         await this.ShardsMarket.stakeETH(1, { value: 10, from: bob });
-        await this.ShardsMarket.setDeadlineForRedeem(0);
+        deadlineForRedeem = 604800 + 20;
+        await mine(deadlineForRedeem); //skip to  deadlineForRedeem
         await this.ShardsMarket.settle(1);
         var shardPoolInfoAfter = await this.ShardsMarket.poolInfo.call(1);
         assert.equal(shardPoolInfoAfter[2], 5);//state
@@ -175,13 +171,17 @@ contract('NFTToken', (accounts) => {
             amount,
             this.MockWETH.address);
         await this.ShardsMarket.stakeETH(1, { value: amount, from: bob });
-        await this.ShardsMarket.setDeadlineForRedeem(0);
+        deadlineForRedeem = 604800 + 20;
+        await mine(deadlineForRedeem); //skip to  deadlineForRedeem
         await this.ShardsMarket.settle(1, { from: bob, gas: 6000000 });
         var shardPoolInfoAfter = await this.ShardsMarket.poolInfo.call(1);
         assert.equal(shardPoolInfoAfter[2], 1);//state
-        var shardBalance = await this.ShardsMarket.getShardBalance.call(shardPoolInfoAfter[4], bob);
 
-        assert.equal(shardBalance, 500 * 1e18);
+        shardInfo = await this.ShardsMarket.shardInfo.call(1);
+        this.ShardToken = await ShardToken.at(shardInfo[2]);
+
+        let owner = await this.NFTToken.ownerOf(100);
+        assert.equal(owner, this.ShardsMarket.address);
     });
 
     it('creatorWithdrawWantToken  works', async () => {
@@ -197,26 +197,29 @@ contract('NFTToken', (accounts) => {
             amount,
             this.MockWETH.address);
         await this.ShardsMarket.stakeETH(1, { value: amount, from: bob });
-        await this.ShardsMarket.setDeadlineForRedeem(0);
+        deadlineForRedeem = 604800 + 20;
+        await mine(deadlineForRedeem); //skip to  deadlineForRedeem
         await this.ShardsMarket.settle(1, { from: bob, gas: 6000000 });
         var shardPoolInfoAfter = await this.ShardsMarket.poolInfo.call(1);
         assert.equal(shardPoolInfoAfter[2], 1);//state
 
-        this.ShardToken = await ShardToken.at(shardPoolInfoAfter[4]);
+
+        shardInfo = await this.ShardsMarket.shardInfo.call(1);
+        this.ShardToken = await ShardToken.at(shardInfo[2]);
         shardBalance = await this.ShardToken.balanceOf(this.ShardsMarket.address);
         assert.equal(shardBalance, 0);
 
-        var price = amount / (10000 * 0.9);
-        assert.equal(shardPoolInfoAfter[9], parseInt(price));
 
         await this.ShardsMarket.creatorWithdrawWantToken(1, { gas: 6000000 });
 
         var userBalanceAfter = await this.MockWETH.balanceOf(bob);
 
-        let shardBalanceForPlatform = 10000 * 0.05 * decimals;
-        var fee = shardBalanceForPlatform * parseInt(price) / decimals;
+        let shardBalanceForPlatform = 10000 * 0.05;
+        var fee = shardBalanceForPlatform * amount / (10000 * 0.9);
 
         amountExpect = amount - parseInt(fee);
+
+        balance = "944444444444444445";
         assert.equal(userBalanceAfter, amountExpect);
     });
     it('applyforBuyout  works', async () => {
@@ -230,26 +233,24 @@ contract('NFTToken', (accounts) => {
             amount,
             this.MockWETH.address);
         await this.ShardsMarket.stakeETH(1, { value: amount, from: alex });
-        await this.ShardsMarket.setDeadlineForRedeem(0);
+        deadlineForRedeem = 604800 + 20;
+        await mine(deadlineForRedeem); //skip to  deadlineForRedeem
         await this.ShardsMarket.settle(1, { from: bob, gas: 6000000 });
         await this.ShardsMarket.usersWithdrawShardToken(1, { from: alex });
 
         var shardPoolInfo = await this.ShardsMarket.poolInfo.call(1);
-
-        var pairAddress = await this.MockFactory.getPair.call(shardPoolInfo[4], shardPoolInfo[11]);
+        shardInfo = await this.ShardsMarket.shardInfo.call(1);
+        var pairAddress = await this.MockFactory.getPair.call(shardInfo[2], shardPoolInfo[10]);
         this.Pair = await Pair.at(pairAddress);
         var reverse = await this.Pair.getReserves.call();
         var reverse0 = reverse[0] / reverse[1] > 1 ? reverse[0] : reverse[1];
         var reverse1 = reverse[0] / reverse[1] > 1 ? reverse[1] : reverse[0];
         assert.equal(reverse0, 500000000000000000000);
-        assert.equal(reverse1, 55555555555555500);
-        var price = amount * reverse1 / reverse0;
-        assert.equal(shardPoolInfo[9], parseInt(price));
-
-        this.ShardToken = await ShardToken.at(shardPoolInfo[4]);
+        assert.equal(reverse1, 55555555555555555);
+        this.ShardToken = await ShardToken.at(shardInfo[2]);
         shardBalance = await this.ShardToken.balanceOf(alex);
-        let amountNeed = parseInt(price) * (10000 * decimals - shardBalance) / decimals;
-        amountNeed = "1111111111111110000";
+        // let amountNeed = parseInt(price) * (10000 * decimals - shardBalance) / decimals;
+        amountNeed = "3111111111111110000";
         //approve
         await this.ShardToken.approve(this.ShardsMarket.address, shardBalance, { from: alex });
         await this.MockWETH.deposit({ value: amountNeed, from: alex });
@@ -278,14 +279,16 @@ contract('NFTToken', (accounts) => {
             amount,
             this.MockWETH.address);
         await this.ShardsMarket.stakeETH(1, { value: amount, from: alex });
-        await this.ShardsMarket.setDeadlineForRedeem(0);
+        deadlineForRedeem = 604800 + 20;
+        await mine(deadlineForRedeem); //skip to  deadlineForRedeem
         await this.ShardsMarket.settle(1, { from: bob, gas: 6000000 });
         await this.ShardsMarket.usersWithdrawShardToken(1, { from: alex });
         //approve
-        var shardPoolInfo = await this.ShardsMarket.poolInfo.call(1);
-        this.ShardToken = await ShardToken.at(shardPoolInfo[4]);
+        shardInfo = await this.ShardsMarket.shardInfo.call(1);
+        this.ShardToken = await ShardToken.at(shardInfo[2]);
         shardBalance = await this.ShardToken.balanceOf(alex);
-        amountNeed = "1111111111111110000";
+
+        amountNeed = "3111111111111110000";
         await this.MockWETH.deposit({ value: amountNeed, from: alex });
         await this.ShardToken.approve(this.ShardsMarket.address, shardBalance, { from: alex });
         await this.MockWETH.approve(this.ShardsMarket.address, amountNeed, { from: alex });
@@ -298,7 +301,6 @@ contract('NFTToken', (accounts) => {
         assert.equal(voteInfo[1], 0); //voteTotal:0
         await this.ShardsMarket.vote(1, true, { from: bob });
 
-        this.ShardToken = await ShardToken.at(shardPoolInfo[4]);
         shardBalance = await this.ShardToken.balanceOf(bob);
         shardBalance = "500000000000000000000";
         voteInfo = await this.ShardsMarket.proposals.call(1);
@@ -317,12 +319,14 @@ contract('NFTToken', (accounts) => {
             amount,
             this.MockWETH.address);
         await this.ShardsMarket.stakeETH(1, { value: amount, from: alex });
-        await this.ShardsMarket.setDeadlineForRedeem(0);
+        deadlineForRedeem = 604800 + 20;
+        await mine(deadlineForRedeem); //skip to  deadlineForRedeem
         await this.ShardsMarket.settle(1, { from: bob, gas: 6000000 });
         await this.ShardsMarket.usersWithdrawShardToken(1, { from: alex });
         //approve
         var shardPoolInfo = await this.ShardsMarket.poolInfo.call(1);
-        this.ShardToken = await ShardToken.at(shardPoolInfo[4]);
+        shardInfo = await this.ShardsMarket.shardInfo.call(1);
+        this.ShardToken = await ShardToken.at(shardInfo[2]);
         shardBalance = await this.ShardToken.balanceOf(alex);
         amountNeed = "1111111111111110000";
         await this.MockWETH.deposit({ value: amountNeed, from: alex });
@@ -334,7 +338,7 @@ contract('NFTToken', (accounts) => {
 
         voteInfo = await this.ShardsMarket.proposals.call(1);
 
-        voteLenth = 259200
+        voteLenth = 259200 + 20;
         await mine(voteLenth); //skip to  voteDeadline
 
         await this.ShardsMarket.voteResultComfirm(1, { from: alex });
@@ -359,12 +363,14 @@ contract('NFTToken', (accounts) => {
             amount,
             this.MockWETH.address);
         await this.ShardsMarket.stakeETH(1, { value: amount, from: alex });
-        await this.ShardsMarket.setDeadlineForRedeem(0);
+        deadlineForRedeem = 604800 + 20;
+        await mine(deadlineForRedeem); //skip to  deadlineForRedeem
         await this.ShardsMarket.settle(1, { from: bob, gas: 6000000 });
         await this.ShardsMarket.usersWithdrawShardToken(1, { from: alex });
         //approve
         var shardPoolInfo = await this.ShardsMarket.poolInfo.call(1);
-        this.ShardToken = await ShardToken.at(shardPoolInfo[4]);
+        shardInfo = await this.ShardsMarket.shardInfo.call(1);
+        this.ShardToken = await ShardToken.at(shardInfo[2]);
         shardBalance = await this.ShardToken.balanceOf(alex);
         amountNeed = "1111111111111110000";
         await this.MockWETH.deposit({ value: amountNeed, from: alex });
@@ -376,7 +382,7 @@ contract('NFTToken', (accounts) => {
 
         voteInfo = await this.ShardsMarket.proposals.call(1);
 
-        voteLenth = 259200
+        voteLenth = 259200 + 20
         await mine(voteLenth); //skip to  voteDeadline
 
         await this.ShardsMarket.voteResultComfirm(1, { from: alex });
@@ -390,7 +396,7 @@ contract('NFTToken', (accounts) => {
         owner = await this.NFTToken.ownerOf(100);
         assert.equal(owner, this.ShardsMarket.address);
     });
-    it('redeemForBuyOutFailed  works', async () => {
+    it('redeemForBuyoutFailed  works', async () => {
         await this.NFTToken.mint(100);
         await this.NFTToken.approve(this.ShardsMarket.address, 100);
         let amount = "1000000000000000000";
@@ -401,12 +407,14 @@ contract('NFTToken', (accounts) => {
             amount,
             this.MockWETH.address);
         await this.ShardsMarket.stakeETH(1, { value: amount, from: alex });
-        await this.ShardsMarket.setDeadlineForRedeem(0);
+        deadlineForRedeem = 604800 + 20;
+        await mine(deadlineForRedeem); //skip to  deadlineForRedeem
         await this.ShardsMarket.settle(1, { from: bob, gas: 6000000 });
         await this.ShardsMarket.usersWithdrawShardToken(1, { from: alex });
         //approve
         var shardPoolInfo = await this.ShardsMarket.poolInfo.call(1);
-        this.ShardToken = await ShardToken.at(shardPoolInfo[4]);
+        shardInfo = await this.ShardsMarket.shardInfo.call(1);
+        this.ShardToken = await ShardToken.at(shardInfo[2]);
         shardBalance = await this.ShardToken.balanceOf(alex);
         amountNeed = "1111111111111110000";
         await this.MockWETH.deposit({ value: amountNeed, from: alex });
@@ -418,12 +426,12 @@ contract('NFTToken', (accounts) => {
 
         voteInfo = await this.ShardsMarket.proposals.call(1);
 
-        voteLenth = 259200
+        voteLenth = 259200 + 20
         await mine(voteLenth); //skip to  voteDeadline
 
         await this.ShardsMarket.voteResultComfirm(1, { from: alex });
 
-        await this.ShardsMarket.redeemForBuyOutFailed(1, { from: alex });
+        await this.ShardsMarket.redeemForBuyoutFailed(1, { from: alex });
 
         shardBalanceNew = await this.ShardToken.balanceOf(alex);
         assert.equal(shardBalanceNew, 9e+21);
@@ -448,12 +456,14 @@ contract('NFTToken', (accounts) => {
             amount,
             this.MockWETH.address);
         await this.ShardsMarket.stakeETH(1, { value: amount, from: alex });
-        await this.ShardsMarket.setDeadlineForRedeem(0);
+        deadlineForRedeem = 604800 + 20;
+        await mine(deadlineForRedeem); //skip to  deadlineForRedeem
         await this.ShardsMarket.settle(1, { from: bob, gas: 6000000 });
         await this.ShardsMarket.usersWithdrawShardToken(1, { from: alex });
         //approve
         var shardPoolInfo = await this.ShardsMarket.poolInfo.call(1);
-        this.ShardToken = await ShardToken.at(shardPoolInfo[4]);
+        shardInfo = await this.ShardsMarket.shardInfo.call(1);
+        this.ShardToken = await ShardToken.at(shardInfo[2]);
         shardBalance = await this.ShardToken.balanceOf(alex);
         amountNeed = "1111111111111110000";
         await this.MockWETH.deposit({ value: amountNeed, from: alex });
@@ -465,7 +475,7 @@ contract('NFTToken', (accounts) => {
 
         voteInfo = await this.ShardsMarket.proposals.call(1);
 
-        voteLenth = 259200
+        voteLenth = 259200 + 20
         await mine(voteLenth); //skip to  voteDeadline
 
         await this.ShardsMarket.voteResultComfirm(1, { from: alex });

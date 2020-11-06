@@ -15,7 +15,7 @@ interface IShardsMarket {
     function totalSupply() external view returns (uint256);
 
     //抵押倒计时
-    function deadlineForStaking() external view returns (uint256);
+    function deadlineForStake() external view returns (uint256);
 
     //赎回倒计时
     function deadlineForRedeem() external view returns (uint256);
@@ -27,16 +27,17 @@ interface IShardsMarket {
     function platformProportion() external view returns (uint256);
 
     //买断比例
-    function buyOutProportion() external view returns (uint256);
+    function buyoutProportion() external view returns (uint256);
 
     //买断倍数
-    function buyOutTimes() external view returns (uint256);
+    function buyoutTimes() external view returns (uint256);
 
     function voteLenth() external view returns (uint256);
 
     function passNeeded() external view returns (uint256);
 
-    event SharedCreated(
+    event ShardCreated(
+        uint256 shardPoolId,
         address indexed creator,
         address nft,
         uint256 _tokenId,
@@ -49,7 +50,14 @@ interface IShardsMarket {
     );
     event Stake(address indexed sender, uint256 shardPoolId, uint256 amount);
     event Redeem(address indexed sender, uint256 shardPoolId, uint256 amount);
-    event SettleSuccess(uint256 indexed shardPoolId, uint256 shardPrice);
+    event SettleSuccess(
+        uint256 indexed shardPoolId,
+        uint256 creatorAmount,
+        uint256 platformAmount,
+        uint256 shardForStakers,
+        uint256 balanceOfWantToken,
+        uint256 fee
+    );
     event SettleFail(uint256 indexed shardPoolId);
     event ApplyforBuyout(
         address indexed sender,
@@ -57,7 +65,9 @@ interface IShardsMarket {
         uint256 indexed _shardPoolId,
         uint256 shardAmount,
         uint256 wantTokenAmount,
-        uint256 voteDeadline
+        uint256 voteDeadline,
+        uint256 buyoutTimes,
+        uint256 price
     );
     event Vote(
         address indexed sender,
@@ -121,7 +131,7 @@ interface IShardsMarket {
         returns (uint256 wantTokenAmount);
 
     //买断投票失败后取回质押的shard和wantToken
-    function redeemForBuyOutFailed(uint256 _shardPoolId)
+    function redeemForBuyoutFailed(uint256 _shardPoolId)
         external
         returns (uint256 shardTokenAmount, uint256 wantTokenAmount);
 
@@ -131,9 +141,9 @@ interface IShardsMarket {
 
     function setPlatformProportion(uint256 _platformProportion) external;
 
-    function setBuyOutProportion(uint256 _buyOutProportion) external;
+    function setBuyoutProportion(uint256 _buyoutProportion) external;
 
-    function setBuyOutTimes(uint256 _buyOutTimes) external;
+    function setBuyoutTimes(uint256 _buyoutTimes) external;
 
     function setVoteLenth(uint256 _voteLenth) external;
 
@@ -143,7 +153,7 @@ interface IShardsMarket {
 
     function setDeadlineForRedeem(uint256 _deadlineForRedeem) external;
 
-    function setDeadlineForStaking(uint256 _deadlineForStaking) external;
+    function setDeadlineForStake(uint256 _deadlineForStake) external;
 
     // function getAllPools() external view returns (uint256[] memory _pools);
 }
