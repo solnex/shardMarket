@@ -13,6 +13,16 @@ contract ShardToken is IShardToken {
     mapping(address => uint256) public override balanceOf;
     mapping(address => mapping(address => uint256)) public override allowance;
 
+    struct Checkpoint {
+        uint32 fromBlock;
+        uint96 votes;
+    }
+    /// @notice A record of votes checkpoints for each account, by index
+    mapping(address => mapping(uint32 => Checkpoint)) public checkpoints;
+
+    /// @notice The number of checkpoints for each account
+    mapping(address => uint32) public numCheckpoints;
+
     uint256 public tokenId;
     address public market;
 

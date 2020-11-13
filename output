@@ -1,0 +1,1898 @@
+// File: contracts/interface/IShardsMarket.sol
+
+pragma solidity 0.6.12;
+
+interface IShardsMarket {
+    enum ShardsState {Live, Listed, ApplyforBuyout, Buyout, SubscriptionFailed}
+
+    /// 已开发
+    //市场的碎片总供应量
+    function totalSupply() external view returns (uint256);
+
+    //抵押倒计时
+    function deadlineForStake() external view returns (uint256);
+
+    //赎回倒计时
+    function deadlineForRedeem() external view returns (uint256);
+
+    //碎片创建者的碎片比例
+    function shardsCreatorProportion() external view returns (uint256);
+
+    //平台的碎片比例
+    function platformProportion() external view returns (uint256);
+
+    //买断比例
+    function buyoutProportion() external view returns (uint256);
+
+    //买断倍数
+    function buyoutTimes() external view returns (uint256);
+
+    function voteLenth() external view returns (uint256);
+
+    function passNeeded() external view returns (uint256);
+
+    event ShardCreated(
+        uint256 shardPoolId,
+        address indexed creator,
+        address nft,
+        uint256 _tokenId,
+        string shardName,
+        string shardSymbol,
+        uint256 minPrice,
+        uint256 createTime,
+        uint256 totalSupply,
+        address wantToken
+    );
+    event Stake(address indexed sender, uint256 shardPoolId, uint256 amount);
+    event Redeem(address indexed sender, uint256 shardPoolId, uint256 amount);
+    event SettleSuccess(
+        uint256 indexed shardPoolId,
+        uint256 creatorAmount,
+        uint256 platformAmount,
+        uint256 shardForStakers,
+        uint256 balanceOfWantToken,
+        uint256 fee
+    );
+    event SettleFail(uint256 indexed shardPoolId);
+    event ApplyforBuyout(
+        address indexed sender,
+        uint256 indexed proposalId,
+        uint256 indexed _shardPoolId,
+        uint256 shardAmount,
+        uint256 wantTokenAmount,
+        uint256 voteDeadline,
+        uint256 buyoutTimes,
+        uint256 price
+    );
+    event Vote(
+        address indexed sender,
+        uint256 indexed proposalId,
+        uint256 indexed _shardPoolId,
+        bool isAgree,
+        uint256 voteAmount
+    );
+    event VoteResultComfirm(
+        uint256 indexed proposalId,
+        uint256 indexed _shardPoolId,
+        bool isPassed
+    );
+
+    //创建碎片
+    function createShard(
+        address nft,
+        uint256 _tokenId,
+        string memory shardName,
+        string memory shardSymbol,
+        uint256 minPrice,
+        address wantToken
+    ) external returns (uint256 shardPoolId);
+
+    //认购
+    function stakeETH(uint256 _shardPoolId) external payable;
+
+    function stake(uint256 _shardPoolId, uint256 amount) external;
+
+    //赎回
+    function redeem(uint256 _shardPoolId, uint256 amount) external;
+
+    //认购结算时进行定价
+    function settle(uint256 _shardPoolId) external;
+
+    //碎片化失败后用户赎回抵押的wantToken
+    function redeemInSubscriptionFailed(uint256 _shardPoolId) external;
+
+    //成功定价后用户提取shardToken
+    function usersWithdrawShardToken(uint256 _shardPoolId) external;
+
+    //成功定价后创建者提取wantToken
+    function creatorWithdrawWantToken(uint256 _shardPoolId) external;
+
+    //申请买断
+    function applyforBuyout(uint256 _shardPoolId, uint256 wantTokenAmount)
+        external
+        returns (uint256 proposalId);
+
+    //申请买断后进行投票
+    function vote(uint256 _shardPoolId, bool isAgree) external;
+
+    //投票结果确认
+    function voteResultComfirm(uint256 _shardPoolId)
+        external
+        returns (bool result);
+
+    //散户进行兑换wantToken
+    function exchangeForWantToken(uint256 _shardPoolId, uint256 shardAmount)
+        external
+        returns (uint256 wantTokenAmount);
+
+    //买断投票失败后取回质押的shard和wantToken
+    function redeemForBuyoutFailed(uint256 _proposalId)
+        external
+        returns (uint256 shardTokenAmount, uint256 wantTokenAmount);
+
+    //设置碎片创建者占比
+    function setShardsCreatorProportion(uint256 _shardsCreatorProportion)
+        external;
+
+    function setPlatformProportion(uint256 _platformProportion) external;
+
+    function setBuyoutProportion(uint256 _buyoutProportion) external;
+
+    function setBuyoutTimes(uint256 _buyoutTimes) external;
+
+    function setVoteLenth(uint256 _voteLenth) external;
+
+    function setPassNeeded(uint256 _passNeeded) external;
+
+    function setTotalSupply(uint256 _totalSupply) external;
+
+    function setDeadlineForRedeem(uint256 _deadlineForRedeem) external;
+
+    function setDeadlineForStake(uint256 _deadlineForStake) external;
+
+    // function getAllPools() external view returns (uint256[] memory _pools);
+}
+
+// File: contracts/interface/IWETH.sol
+
+pragma solidity >=0.5.0;
+
+interface IWETH {
+    function deposit() external payable;
+
+    function transfer(address to, uint256 value) external returns (bool);
+
+    function withdraw(uint256) external;
+
+    function approve(address guy, uint256 wad) external returns (bool);
+}
+
+// File: contracts/interface/IShardToken.sol
+
+pragma solidity 0.6.12;
+
+interface IShardToken {
+    event Approval(
+        address indexed owner,
+        address indexed spender,
+        uint256 value
+    );
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    function name() external pure returns (string memory);
+
+    function symbol() external pure returns (string memory);
+
+    function decimals() external pure returns (uint8);
+
+    function totalSupply() external view returns (uint256);
+
+    function balanceOf(address owner) external view returns (uint256);
+
+    function allowance(address owner, address spender)
+        external
+        view
+        returns (uint256);
+
+    function approve(address spender, uint256 value) external returns (bool);
+
+    function transfer(address to, uint256 value) external returns (bool);
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 value
+    ) external returns (bool);
+
+    function burn(address from, uint256 value) external;
+
+    function mint(address to, uint256 value) external;
+
+    function initialize(
+        uint256 _tokenId,
+        string memory _symbol,
+        string memory _name
+    ) external;
+}
+
+// File: contracts/interface/IUniswapV2Pair.sol
+
+pragma solidity >=0.5.0;
+
+interface IUniswapV2Pair {
+    event Approval(
+        address indexed owner,
+        address indexed spender,
+        uint256 value
+    );
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    function name() external pure returns (string memory);
+
+    function symbol() external pure returns (string memory);
+
+    function decimals() external pure returns (uint8);
+
+    function totalSupply() external view returns (uint256);
+
+    function balanceOf(address owner) external view returns (uint256);
+
+    function allowance(address owner, address spender)
+        external
+        view
+        returns (uint256);
+
+    function approve(address spender, uint256 value) external returns (bool);
+
+    function transfer(address to, uint256 value) external returns (bool);
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 value
+    ) external returns (bool);
+
+    function DOMAIN_SEPARATOR() external view returns (bytes32);
+
+    function PERMIT_TYPEHASH() external pure returns (bytes32);
+
+    function nonces(address owner) external view returns (uint256);
+
+    function permit(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+
+    event Mint(address indexed sender, uint256 amount0, uint256 amount1);
+    event Burn(
+        address indexed sender,
+        uint256 amount0,
+        uint256 amount1,
+        address indexed to
+    );
+    event Swap(
+        address indexed sender,
+        uint256 amount0In,
+        uint256 amount1In,
+        uint256 amount0Out,
+        uint256 amount1Out,
+        address indexed to
+    );
+    event Sync(uint112 reserve0, uint112 reserve1);
+
+    function MINIMUM_LIQUIDITY() external pure returns (uint256);
+
+    function factory() external view returns (address);
+
+    function token0() external view returns (address);
+
+    function token1() external view returns (address);
+
+    function getReserves()
+        external
+        view
+        returns (
+            uint112 reserve0,
+            uint112 reserve1,
+            uint32 blockTimestampLast
+        );
+
+    function price0CumulativeLast() external view returns (uint256);
+
+    function price1CumulativeLast() external view returns (uint256);
+
+    function kLast() external view returns (uint256);
+
+    function mint(address to) external returns (uint256 liquidity);
+
+    function burn(address to)
+        external
+        returns (uint256 amount0, uint256 amount1);
+
+    function swap(
+        uint256 amount0Out,
+        uint256 amount1Out,
+        address to,
+        bytes calldata data
+    ) external;
+
+    function skim(address to) external;
+
+    function sync() external;
+
+    function initialize(address, address) external;
+}
+
+// File: contracts/interface/IUniswapV2Factory.sol
+
+pragma solidity >=0.5.0;
+
+interface IUniswapV2Factory {
+    event PairCreated(
+        address indexed token0,
+        address indexed token1,
+        address pair,
+        uint256
+    );
+
+    function feeTo() external view returns (address);
+
+    function feeToSetter() external view returns (address);
+
+    function getPair(address tokenA, address tokenB)
+        external
+        view
+        returns (address pair);
+
+    function allPairs(uint256) external view returns (address pair);
+
+    function allPairsLength() external view returns (uint256);
+
+    function createPair(address tokenA, address tokenB)
+        external
+        returns (address pair);
+
+    function setFeeTo(address) external;
+
+    function setFeeToSetter(address) external;
+}
+
+// File: openzeppelin-solidity/contracts/math/SafeMath.sol
+
+// SPDX-License-Identifier: MIT
+
+pragma solidity ^0.6.0;
+
+/**
+ * @dev Wrappers over Solidity's arithmetic operations with added overflow
+ * checks.
+ *
+ * Arithmetic operations in Solidity wrap on overflow. This can easily result
+ * in bugs, because programmers usually assume that an overflow raises an
+ * error, which is the standard behavior in high level programming languages.
+ * `SafeMath` restores this intuition by reverting the transaction when an
+ * operation overflows.
+ *
+ * Using this library instead of the unchecked operations eliminates an entire
+ * class of bugs, so it's recommended to use it always.
+ */
+library SafeMath {
+    /**
+     * @dev Returns the addition of two unsigned integers, reverting on
+     * overflow.
+     *
+     * Counterpart to Solidity's `+` operator.
+     *
+     * Requirements:
+     *
+     * - Addition cannot overflow.
+     */
+    function add(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 c = a + b;
+        require(c >= a, "SafeMath: addition overflow");
+
+        return c;
+    }
+
+    /**
+     * @dev Returns the subtraction of two unsigned integers, reverting on
+     * overflow (when the result is negative).
+     *
+     * Counterpart to Solidity's `-` operator.
+     *
+     * Requirements:
+     *
+     * - Subtraction cannot overflow.
+     */
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        return sub(a, b, "SafeMath: subtraction overflow");
+    }
+
+    /**
+     * @dev Returns the subtraction of two unsigned integers, reverting with custom message on
+     * overflow (when the result is negative).
+     *
+     * Counterpart to Solidity's `-` operator.
+     *
+     * Requirements:
+     *
+     * - Subtraction cannot overflow.
+     */
+    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+        require(b <= a, errorMessage);
+        uint256 c = a - b;
+
+        return c;
+    }
+
+    /**
+     * @dev Returns the multiplication of two unsigned integers, reverting on
+     * overflow.
+     *
+     * Counterpart to Solidity's `*` operator.
+     *
+     * Requirements:
+     *
+     * - Multiplication cannot overflow.
+     */
+    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+        // Gas optimization: this is cheaper than requiring 'a' not being zero, but the
+        // benefit is lost if 'b' is also tested.
+        // See: https://github.com/OpenZeppelin/openzeppelin-contracts/pull/522
+        if (a == 0) {
+            return 0;
+        }
+
+        uint256 c = a * b;
+        require(c / a == b, "SafeMath: multiplication overflow");
+
+        return c;
+    }
+
+    /**
+     * @dev Returns the integer division of two unsigned integers. Reverts on
+     * division by zero. The result is rounded towards zero.
+     *
+     * Counterpart to Solidity's `/` operator. Note: this function uses a
+     * `revert` opcode (which leaves remaining gas untouched) while Solidity
+     * uses an invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     *
+     * - The divisor cannot be zero.
+     */
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+        return div(a, b, "SafeMath: division by zero");
+    }
+
+    /**
+     * @dev Returns the integer division of two unsigned integers. Reverts with custom message on
+     * division by zero. The result is rounded towards zero.
+     *
+     * Counterpart to Solidity's `/` operator. Note: this function uses a
+     * `revert` opcode (which leaves remaining gas untouched) while Solidity
+     * uses an invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     *
+     * - The divisor cannot be zero.
+     */
+    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+        require(b > 0, errorMessage);
+        uint256 c = a / b;
+        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+
+        return c;
+    }
+
+    /**
+     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),
+     * Reverts when dividing by zero.
+     *
+     * Counterpart to Solidity's `%` operator. This function uses a `revert`
+     * opcode (which leaves remaining gas untouched) while Solidity uses an
+     * invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     *
+     * - The divisor cannot be zero.
+     */
+    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
+        return mod(a, b, "SafeMath: modulo by zero");
+    }
+
+    /**
+     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),
+     * Reverts with custom message when dividing by zero.
+     *
+     * Counterpart to Solidity's `%` operator. This function uses a `revert`
+     * opcode (which leaves remaining gas untouched) while Solidity uses an
+     * invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     *
+     * - The divisor cannot be zero.
+     */
+    function mod(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+        require(b != 0, errorMessage);
+        return a % b;
+    }
+}
+
+// File: contracts/SharedToken.sol
+
+pragma solidity 0.6.12;
+
+
+
+contract ShardToken is IShardToken {
+    using SafeMath for uint256;
+
+    string public override name = "NFT V1";
+    string public override symbol = "NFT-V1";
+    uint8 public constant override decimals = 18;
+    uint256 public override totalSupply;
+    mapping(address => uint256) public override balanceOf;
+    mapping(address => mapping(address => uint256)) public override allowance;
+
+    uint256 public tokenId;
+    address public market;
+
+    event Approval(
+        address indexed owner,
+        address indexed spender,
+        uint256 value
+    );
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    constructor() public {
+        market = msg.sender;
+    }
+
+    function _mint(address to, uint256 value) internal {
+        totalSupply = totalSupply.add(value);
+        balanceOf[to] = balanceOf[to].add(value);
+        emit Transfer(address(0), to, value);
+    }
+
+    function _burn(address from, uint256 value) internal {
+        balanceOf[from] = balanceOf[from].sub(value);
+        totalSupply = totalSupply.sub(value);
+        emit Transfer(from, address(0), value);
+    }
+
+    function _approve(
+        address owner,
+        address spender,
+        uint256 value
+    ) private {
+        allowance[owner][spender] = value;
+        emit Approval(owner, spender, value);
+    }
+
+    function _transfer(
+        address from,
+        address to,
+        uint256 value
+    ) private {
+        balanceOf[from] = balanceOf[from].sub(value);
+        balanceOf[to] = balanceOf[to].add(value);
+        emit Transfer(from, to, value);
+    }
+
+    function approve(address spender, uint256 value)
+        external
+        override
+        returns (bool)
+    {
+        _approve(msg.sender, spender, value);
+        return true;
+    }
+
+    function transfer(address to, uint256 value)
+        external
+        override
+        returns (bool)
+    {
+        _transfer(msg.sender, to, value);
+        return true;
+    }
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 value
+    ) external override returns (bool) {
+        if (allowance[from][msg.sender] != uint256(-1)) {
+            allowance[from][msg.sender] = allowance[from][msg.sender].sub(
+                value
+            );
+        }
+        _transfer(from, to, value);
+        return true;
+    }
+
+    function burn(address from, uint256 value) external override {
+        require(msg.sender == market, "FORBIDDEN");
+        _burn(from, value);
+    }
+
+    function mint(address to, uint256 value) external override {
+        require(msg.sender == market, "FORBIDDEN");
+        _mint(to, value);
+    }
+
+    function initialize(
+        uint256 _tokenId,
+        string memory _symbol,
+        string memory _name
+    ) external override {
+        require(msg.sender == market, "FORBIDDEN"); // sufficient check
+        tokenId = _tokenId;
+        name = _name;
+        symbol = _symbol;
+    }
+}
+
+// File: contracts/libraries/TransferHelper.sol
+
+pragma solidity >=0.6.0;
+
+// helper methods for interacting with ERC20 tokens and sending ETH that do not consistently return true/false
+library TransferHelper {
+    function safeApprove(
+        address token,
+        address to,
+        uint256 value
+    ) internal {
+        // bytes4(keccak256(bytes('approve(address,uint256)')));
+        (bool success, bytes memory data) = token.call(
+            abi.encodeWithSelector(0x095ea7b3, to, value)
+        );
+        require(
+            success && (data.length == 0 || abi.decode(data, (bool))),
+            "TransferHelper: APPROVE_FAILED"
+        );
+    }
+
+    function safeTransfer(
+        address token,
+        address to,
+        uint256 value
+    ) internal {
+        // bytes4(keccak256(bytes('transfer(address,uint256)')));
+        (bool success, bytes memory data) = token.call(
+            abi.encodeWithSelector(0xa9059cbb, to, value)
+        );
+        require(
+            success && (data.length == 0 || abi.decode(data, (bool))),
+            "TransferHelper: TRANSFER_FAILED"
+        );
+    }
+
+    function safeTransferFrom(
+        address token,
+        address from,
+        address to,
+        uint256 value
+    ) internal {
+        // bytes4(keccak256(bytes('transferFrom(address,address,uint256)')));
+        (bool success, bytes memory data) = token.call(
+            abi.encodeWithSelector(0x23b872dd, from, to, value)
+        );
+        require(
+            success && (data.length == 0 || abi.decode(data, (bool))),
+            "TransferHelper: TRANSFER_FROM_FAILED"
+        );
+    }
+
+    function safeTransferETH(address to, uint256 value) internal {
+        (bool success, ) = to.call{value: value}(new bytes(0));
+        require(success, "TransferHelper: ETH_TRANSFER_FAILED");
+    }
+}
+
+// File: openzeppelin-solidity/contracts/introspection/IERC165.sol
+
+
+
+pragma solidity ^0.6.0;
+
+/**
+ * @dev Interface of the ERC165 standard, as defined in the
+ * https://eips.ethereum.org/EIPS/eip-165[EIP].
+ *
+ * Implementers can declare support of contract interfaces, which can then be
+ * queried by others ({ERC165Checker}).
+ *
+ * For an implementation, see {ERC165}.
+ */
+interface IERC165 {
+    /**
+     * @dev Returns true if this contract implements the interface defined by
+     * `interfaceId`. See the corresponding
+     * https://eips.ethereum.org/EIPS/eip-165#how-interfaces-are-identified[EIP section]
+     * to learn more about how these ids are created.
+     *
+     * This function call must use less than 30 000 gas.
+     */
+    function supportsInterface(bytes4 interfaceId) external view returns (bool);
+}
+
+// File: openzeppelin-solidity/contracts/token/ERC721/IERC721.sol
+
+
+
+pragma solidity ^0.6.2;
+
+
+/**
+ * @dev Required interface of an ERC721 compliant contract.
+ */
+interface IERC721 is IERC165 {
+    /**
+     * @dev Emitted when `tokenId` token is transferred from `from` to `to`.
+     */
+    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
+
+    /**
+     * @dev Emitted when `owner` enables `approved` to manage the `tokenId` token.
+     */
+    event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
+
+    /**
+     * @dev Emitted when `owner` enables or disables (`approved`) `operator` to manage all of its assets.
+     */
+    event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
+
+    /**
+     * @dev Returns the number of tokens in ``owner``'s account.
+     */
+    function balanceOf(address owner) external view returns (uint256 balance);
+
+    /**
+     * @dev Returns the owner of the `tokenId` token.
+     *
+     * Requirements:
+     *
+     * - `tokenId` must exist.
+     */
+    function ownerOf(uint256 tokenId) external view returns (address owner);
+
+    /**
+     * @dev Safely transfers `tokenId` token from `from` to `to`, checking first that contract recipients
+     * are aware of the ERC721 protocol to prevent tokens from being forever locked.
+     *
+     * Requirements:
+     *
+     * - `from` cannot be the zero address.
+     * - `to` cannot be the zero address.
+     * - `tokenId` token must exist and be owned by `from`.
+     * - If the caller is not `from`, it must be have been allowed to move this token by either {approve} or {setApprovalForAll}.
+     * - If `to` refers to a smart contract, it must implement {IERC721Receiver-onERC721Received}, which is called upon a safe transfer.
+     *
+     * Emits a {Transfer} event.
+     */
+    function safeTransferFrom(address from, address to, uint256 tokenId) external;
+
+    /**
+     * @dev Transfers `tokenId` token from `from` to `to`.
+     *
+     * WARNING: Usage of this method is discouraged, use {safeTransferFrom} whenever possible.
+     *
+     * Requirements:
+     *
+     * - `from` cannot be the zero address.
+     * - `to` cannot be the zero address.
+     * - `tokenId` token must be owned by `from`.
+     * - If the caller is not `from`, it must be approved to move this token by either {approve} or {setApprovalForAll}.
+     *
+     * Emits a {Transfer} event.
+     */
+    function transferFrom(address from, address to, uint256 tokenId) external;
+
+    /**
+     * @dev Gives permission to `to` to transfer `tokenId` token to another account.
+     * The approval is cleared when the token is transferred.
+     *
+     * Only a single account can be approved at a time, so approving the zero address clears previous approvals.
+     *
+     * Requirements:
+     *
+     * - The caller must own the token or be an approved operator.
+     * - `tokenId` must exist.
+     *
+     * Emits an {Approval} event.
+     */
+    function approve(address to, uint256 tokenId) external;
+
+    /**
+     * @dev Returns the account approved for `tokenId` token.
+     *
+     * Requirements:
+     *
+     * - `tokenId` must exist.
+     */
+    function getApproved(uint256 tokenId) external view returns (address operator);
+
+    /**
+     * @dev Approve or remove `operator` as an operator for the caller.
+     * Operators can call {transferFrom} or {safeTransferFrom} for any token owned by the caller.
+     *
+     * Requirements:
+     *
+     * - The `operator` cannot be the caller.
+     *
+     * Emits an {ApprovalForAll} event.
+     */
+    function setApprovalForAll(address operator, bool _approved) external;
+
+    /**
+     * @dev Returns if the `operator` is allowed to manage all of the assets of `owner`.
+     *
+     * See {setApprovalForAll}
+     */
+    function isApprovedForAll(address owner, address operator) external view returns (bool);
+
+    /**
+      * @dev Safely transfers `tokenId` token from `from` to `to`.
+      *
+      * Requirements:
+      *
+     * - `from` cannot be the zero address.
+     * - `to` cannot be the zero address.
+      * - `tokenId` token must exist and be owned by `from`.
+      * - If the caller is not `from`, it must be approved to move this token by either {approve} or {setApprovalForAll}.
+      * - If `to` refers to a smart contract, it must implement {IERC721Receiver-onERC721Received}, which is called upon a safe transfer.
+      *
+      * Emits a {Transfer} event.
+      */
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes calldata data) external;
+}
+
+// File: openzeppelin-solidity/contracts/token/ERC721/IERC721Receiver.sol
+
+
+
+pragma solidity ^0.6.0;
+
+/**
+ * @title ERC721 token receiver interface
+ * @dev Interface for any contract that wants to support safeTransfers
+ * from ERC721 asset contracts.
+ */
+interface IERC721Receiver {
+    /**
+     * @dev Whenever an {IERC721} `tokenId` token is transferred to this contract via {IERC721-safeTransferFrom}
+     * by `operator` from `from`, this function is called.
+     *
+     * It must return its Solidity selector to confirm the token transfer.
+     * If any other value is returned or the interface is not implemented by the recipient, the transfer will be reverted.
+     *
+     * The selector can be obtained in Solidity with `IERC721.onERC721Received.selector`.
+     */
+    function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data)
+    external returns (bytes4);
+}
+
+// File: contracts/interface/IUniswapV2Router01.sol
+
+pragma solidity >=0.6.2;
+
+interface IUniswapV2Router01 {
+    function factory() external pure returns (address);
+
+    function WETH() external pure returns (address);
+
+    function addLiquidity(
+        address tokenA,
+        address tokenB,
+        uint256 amountADesired,
+        uint256 amountBDesired,
+        uint256 amountAMin,
+        uint256 amountBMin,
+        address to,
+        uint256 deadline
+    )
+        external
+        returns (
+            uint256 amountA,
+            uint256 amountB,
+            uint256 liquidity
+        );
+
+    function addLiquidityETH(
+        address token,
+        uint256 amountTokenDesired,
+        uint256 amountTokenMin,
+        uint256 amountETHMin,
+        address to,
+        uint256 deadline
+    )
+        external
+        payable
+        returns (
+            uint256 amountToken,
+            uint256 amountETH,
+            uint256 liquidity
+        );
+
+    function removeLiquidity(
+        address tokenA,
+        address tokenB,
+        uint256 liquidity,
+        uint256 amountAMin,
+        uint256 amountBMin,
+        address to,
+        uint256 deadline
+    ) external returns (uint256 amountA, uint256 amountB);
+
+    function removeLiquidityETH(
+        address token,
+        uint256 liquidity,
+        uint256 amountTokenMin,
+        uint256 amountETHMin,
+        address to,
+        uint256 deadline
+    ) external returns (uint256 amountToken, uint256 amountETH);
+
+    function removeLiquidityWithPermit(
+        address tokenA,
+        address tokenB,
+        uint256 liquidity,
+        uint256 amountAMin,
+        uint256 amountBMin,
+        address to,
+        uint256 deadline,
+        bool approveMax,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external returns (uint256 amountA, uint256 amountB);
+
+    function removeLiquidityETHWithPermit(
+        address token,
+        uint256 liquidity,
+        uint256 amountTokenMin,
+        uint256 amountETHMin,
+        address to,
+        uint256 deadline,
+        bool approveMax,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external returns (uint256 amountToken, uint256 amountETH);
+
+    function swapExactTokensForTokens(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external returns (uint256[] memory amounts);
+
+    function swapTokensForExactTokens(
+        uint256 amountOut,
+        uint256 amountInMax,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external returns (uint256[] memory amounts);
+
+    function swapExactETHForTokens(
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external payable returns (uint256[] memory amounts);
+
+    function swapTokensForExactETH(
+        uint256 amountOut,
+        uint256 amountInMax,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external returns (uint256[] memory amounts);
+
+    function swapExactTokensForETH(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external returns (uint256[] memory amounts);
+
+    function swapETHForExactTokens(
+        uint256 amountOut,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external payable returns (uint256[] memory amounts);
+
+    function quote(
+        uint256 amountA,
+        uint256 reserveA,
+        uint256 reserveB
+    ) external pure returns (uint256 amountB);
+
+    function getAmountOut(
+        uint256 amountIn,
+        uint256 reserveIn,
+        uint256 reserveOut
+    ) external pure returns (uint256 amountOut);
+
+    function getAmountIn(
+        uint256 amountOut,
+        uint256 reserveIn,
+        uint256 reserveOut
+    ) external pure returns (uint256 amountIn);
+
+    function getAmountsOut(uint256 amountIn, address[] calldata path)
+        external
+        view
+        returns (uint256[] memory amounts);
+
+    function getAmountsIn(uint256 amountOut, address[] calldata path)
+        external
+        view
+        returns (uint256[] memory amounts);
+}
+
+// File: contracts/interface/IUniswapV2Router02.sol
+
+pragma solidity >=0.6.2;
+
+
+interface IUniswapV2Router02 is IUniswapV2Router01 {
+    function removeLiquidityETHSupportingFeeOnTransferTokens(
+        address token,
+        uint256 liquidity,
+        uint256 amountTokenMin,
+        uint256 amountETHMin,
+        address to,
+        uint256 deadline
+    ) external returns (uint256 amountETH);
+
+    function removeLiquidityETHWithPermitSupportingFeeOnTransferTokens(
+        address token,
+        uint256 liquidity,
+        uint256 amountTokenMin,
+        uint256 amountETHMin,
+        address to,
+        uint256 deadline,
+        bool approveMax,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external returns (uint256 amountETH);
+
+    function swapExactTokensForTokensSupportingFeeOnTransferTokens(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external;
+
+    function swapExactETHForTokensSupportingFeeOnTransferTokens(
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external payable;
+
+    function swapExactTokensForETHSupportingFeeOnTransferTokens(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external;
+}
+
+// File: openzeppelin-solidity/contracts/token/ERC20/IERC20.sol
+
+
+
+pragma solidity ^0.6.0;
+
+/**
+ * @dev Interface of the ERC20 standard as defined in the EIP.
+ */
+interface IERC20 {
+    /**
+     * @dev Returns the amount of tokens in existence.
+     */
+    function totalSupply() external view returns (uint256);
+
+    /**
+     * @dev Returns the amount of tokens owned by `account`.
+     */
+    function balanceOf(address account) external view returns (uint256);
+
+    /**
+     * @dev Moves `amount` tokens from the caller's account to `recipient`.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * Emits a {Transfer} event.
+     */
+    function transfer(address recipient, uint256 amount) external returns (bool);
+
+    /**
+     * @dev Returns the remaining number of tokens that `spender` will be
+     * allowed to spend on behalf of `owner` through {transferFrom}. This is
+     * zero by default.
+     *
+     * This value changes when {approve} or {transferFrom} are called.
+     */
+    function allowance(address owner, address spender) external view returns (uint256);
+
+    /**
+     * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * IMPORTANT: Beware that changing an allowance with this method brings the risk
+     * that someone may use both the old and the new allowance by unfortunate
+     * transaction ordering. One possible solution to mitigate this race
+     * condition is to first reduce the spender's allowance to 0 and set the
+     * desired value afterwards:
+     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+     *
+     * Emits an {Approval} event.
+     */
+    function approve(address spender, uint256 amount) external returns (bool);
+
+    /**
+     * @dev Moves `amount` tokens from `sender` to `recipient` using the
+     * allowance mechanism. `amount` is then deducted from the caller's
+     * allowance.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * Emits a {Transfer} event.
+     */
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+
+    /**
+     * @dev Emitted when `value` tokens are moved from one account (`from`) to
+     * another (`to`).
+     *
+     * Note that `value` may be zero.
+     */
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    /**
+     * @dev Emitted when the allowance of a `spender` for an `owner` is set by
+     * a call to {approve}. `value` is the new allowance.
+     */
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+}
+
+// File: contracts/ShardsMarket.sol
+
+pragma solidity 0.6.12;
+
+
+
+
+
+
+
+
+
+
+
+
+
+contract ShardsMarket is IShardsMarket, IERC721Receiver {
+    using SafeMath for uint256;
+
+    address public immutable router;
+    address governance;
+
+    address factory;
+
+    //市场的碎片总供应量
+    uint256 public override totalSupply = 10000000000000000000000;
+
+    address public immutable WETH;
+
+    //抵押倒计时 60*60*24*5
+    uint256 public override deadlineForStake = 432000;
+    //赎回倒计时 60*60*24*7
+    uint256 public override deadlineForRedeem = 604800;
+    //碎片创建者的碎片比例
+    uint256 public override shardsCreatorProportion = 5;
+    //平台的碎片比例
+    uint256 public override platformProportion = 5;
+
+    //买断比例
+    uint256 public override buyoutProportion = 15;
+    //max
+    uint256 public constant max = 100;
+    //买断倍数
+    uint256 public override buyoutTimes = 2;
+    //shardPoolId
+    uint256 public shardPoolIdCount = 0;
+    //所有的shardpool的Id
+    uint256[] public allPools;
+    // Info of each pool.
+    mapping(uint256 => shardPool) public poolInfo;
+    //碎片池
+    struct shardPool {
+        address creator; //shard创建者
+        uint256 tokenId; //nft的tokenID
+        ShardsState state; //shared状态
+        uint256 createTime; //创建时间
+        uint256 deadlineForStake; //抵押deadline
+        uint256 deadlineForRedeem; //赎回deadline
+        uint256 balanceOfWantToken; //pool抵押总量
+        uint256 minPrice; //创建者要求的认购最低价格
+        address nft; //nft合约地址
+        bool isCreatorWithDraw; //创建者是否提取wantToken
+        address wantToken; //创建者要求认购的token地址
+    }
+    //每个pool中的shard信息
+    mapping(uint256 => shard) public shardInfo;
+    struct shard {
+        string shardName; //shardName
+        string shardSymbol; //shardSymbol
+        address shardToken; //地址
+        uint256 totalShardSupply; //总供应
+        uint256 shardForCreator; //给创建者的数量
+        uint256 shardForPlatform; //给平台的数量
+        uint256 shardForStakers; //给抵押人的数量
+    }
+    //每个shardpool对应的user信息
+    mapping(uint256 => mapping(address => UserInfo)) public userInfo;
+    struct UserInfo {
+        uint256 amount;
+        bool isWithdrawShard;
+    }
+
+    mapping(address => address) public LPToken;
+    //id
+    uint256 public proposolIdCount = 0;
+    //投票时间跨度 60*60*24*3
+    uint256 public override voteLenth = 259200;
+    //每个NFT对应的投票id
+    mapping(uint256 => uint256) public proposalIds;
+
+    mapping(uint256 => uint256[]) public proposalsHistory;
+    //投票
+    mapping(uint256 => Proposal) public proposals;
+    //用户是否已经投票
+    mapping(uint256 => mapping(address => bool)) public voted;
+    //代币用户是否被锁定
+    mapping(address => mapping(address => uint256)) public blocked;
+    //投票通过比例
+    uint256 public override passNeeded = 75;
+
+    struct Proposal {
+        uint256 votesReceived;
+        uint256 voteTotal;
+        bool passed;
+        address submitter;
+        uint256 voteDeadline;
+        uint256 shardAmount;
+        uint256 wantTokenAmount;
+        uint256 buyoutTimes;
+        uint256 price;
+        bool isSubmitterWithDraw;
+        uint256 shardPoolId;
+        bool isFailedConfirmed;
+    }
+
+    uint256 private timeSpan = 60;
+
+    constructor(
+        address _WETH,
+        address _factory,
+        address _governance,
+        address _router
+    ) public {
+        WETH = _WETH;
+        factory = _factory;
+        governance = _governance;
+        router = _router;
+    }
+
+    function createShard(
+        address nft,
+        uint256 _tokenId,
+        string memory shardName,
+        string memory shardSymbol,
+        uint256 minPrice,
+        address wantToken
+    ) external override returns (uint256 shardPoolId) {
+        require(IERC721(nft).ownerOf(_tokenId) == msg.sender, "UNAUTHORIZED");
+        shardPoolId = shardPoolIdCount.add(1);
+        poolInfo[shardPoolId] = shardPool({
+            creator: msg.sender,
+            tokenId: _tokenId,
+            state: ShardsState.Live,
+            createTime: block.timestamp,
+            deadlineForStake: block.timestamp.add(deadlineForStake),
+            deadlineForRedeem: block.timestamp.add(deadlineForRedeem),
+            balanceOfWantToken: 0,
+            minPrice: minPrice,
+            nft: nft,
+            isCreatorWithDraw: false,
+            wantToken: wantToken
+        });
+        IERC721(nft).safeTransferFrom(msg.sender, address(this), _tokenId);
+        uint256 creatorAmount = totalSupply.mul(shardsCreatorProportion).div(
+            max
+        );
+        uint256 platformAmount = totalSupply.mul(platformProportion).div(max);
+        uint256 stakersAmount = totalSupply.sub(creatorAmount).sub(
+            platformAmount
+        );
+        shardInfo[shardPoolId] = shard({
+            shardName: shardName,
+            shardSymbol: shardSymbol,
+            shardToken: address(0),
+            totalShardSupply: totalSupply,
+            shardForCreator: creatorAmount,
+            shardForPlatform: platformAmount,
+            shardForStakers: stakersAmount
+        });
+        allPools.push(shardPoolId);
+        shardPoolIdCount = shardPoolId;
+        emit ShardCreated(
+            shardPoolId,
+            msg.sender,
+            nft,
+            _tokenId,
+            shardName,
+            shardSymbol,
+            minPrice,
+            block.timestamp,
+            totalSupply,
+            wantToken
+        );
+    }
+
+    function stake(uint256 _shardPoolId, uint256 amount) external override {
+        require(
+            block.timestamp <= poolInfo[_shardPoolId].deadlineForStake,
+            "NFT:EXPIRED"
+        );
+        address wantToken = poolInfo[_shardPoolId].wantToken;
+        TransferHelper.safeTransferFrom(
+            wantToken,
+            msg.sender,
+            address(this),
+            amount
+        );
+        _stake(_shardPoolId, amount);
+    }
+
+    function stakeETH(uint256 _shardPoolId) external override payable {
+        require(
+            block.timestamp <= poolInfo[_shardPoolId].deadlineForStake,
+            "NFT:EXPIRED"
+        );
+        require(poolInfo[_shardPoolId].wantToken == WETH, "UNWANTED");
+        IWETH(WETH).deposit{value: msg.value}();
+        _stake(_shardPoolId, msg.value);
+    }
+
+    function _stake(uint256 _shardPoolId, uint256 amount) private {
+        userInfo[_shardPoolId][msg.sender].amount = userInfo[_shardPoolId][msg
+            .sender]
+            .amount
+            .add(amount);
+        poolInfo[_shardPoolId].balanceOfWantToken = poolInfo[_shardPoolId]
+            .balanceOfWantToken
+            .add(amount);
+        emit Stake(msg.sender, _shardPoolId, amount);
+    }
+
+    function redeem(uint256 _shardPoolId, uint256 amount) external override {
+        require(
+            block.timestamp <= poolInfo[_shardPoolId].deadlineForRedeem,
+            "NFT:EXPIRED"
+        );
+        require(
+            userInfo[_shardPoolId][msg.sender].amount >= amount,
+            "INSUFFICIENT BALANCE"
+        );
+        userInfo[_shardPoolId][msg.sender].amount = userInfo[_shardPoolId][msg
+            .sender]
+            .amount
+            .sub(amount);
+        poolInfo[_shardPoolId].balanceOfWantToken = poolInfo[_shardPoolId]
+            .balanceOfWantToken
+            .sub(amount);
+        TransferHelper.safeTransfer(
+            poolInfo[_shardPoolId].wantToken,
+            msg.sender,
+            amount
+        );
+        emit Redeem(msg.sender, _shardPoolId, amount);
+    }
+
+    function settle(uint256 _shardPoolId) external override {
+        require(
+            block.timestamp > poolInfo[_shardPoolId].deadlineForRedeem,
+            "NFT:NOT READY"
+        );
+        require(
+            poolInfo[_shardPoolId].state == ShardsState.Live,
+            "NFT:LIVE STATE IS REQUIRED"
+        );
+        if (
+            poolInfo[_shardPoolId].balanceOfWantToken <
+            poolInfo[_shardPoolId].minPrice
+        ) {
+            _failToSetPrice(_shardPoolId);
+        } else {
+            _successToSetPrice(_shardPoolId);
+        }
+    }
+
+    function redeemInSubscriptionFailed(uint256 _shardPoolId)
+        external
+        override
+    {
+        require(
+            poolInfo[_shardPoolId].state == ShardsState.SubscriptionFailed,
+            "WRONG_STATE"
+        );
+        uint256 balance = userInfo[_shardPoolId][msg.sender].amount;
+        require(balance > 0, "INSUFFIENT BALANCE");
+        userInfo[_shardPoolId][msg.sender].amount = 0;
+        poolInfo[_shardPoolId].balanceOfWantToken = poolInfo[_shardPoolId]
+            .balanceOfWantToken
+            .sub(balance);
+        TransferHelper.safeTransfer(
+            poolInfo[_shardPoolId].wantToken,
+            msg.sender,
+            balance
+        );
+
+        emit Redeem(msg.sender, _shardPoolId, balance);
+    }
+
+    function usersWithdrawShardToken(uint256 _shardPoolId) external override {
+        require(
+            poolInfo[_shardPoolId].state == ShardsState.Listed,
+            "WRONG_STATE"
+        );
+        uint256 userBanlance = userInfo[_shardPoolId][msg.sender].amount;
+        bool isWithdrawShard = userInfo[_shardPoolId][msg.sender]
+            .isWithdrawShard;
+        require(userBanlance > 0 && !isWithdrawShard, "INSUFFIENT BALANCE");
+        uint256 shardsForUsers = shardInfo[_shardPoolId].shardForStakers;
+        uint256 totalBalance = poolInfo[_shardPoolId].balanceOfWantToken;
+        // formula:
+        // shardAmount/shardsForUsers= userBanlance/totalBalance
+        //
+        uint256 shardAmount = userBanlance.mul(shardsForUsers).div(
+            totalBalance
+        );
+        userInfo[_shardPoolId][msg.sender].isWithdrawShard = true;
+        IShardToken(shardInfo[_shardPoolId].shardToken).mint(
+            msg.sender,
+            shardAmount
+        );
+    }
+
+    function creatorWithdrawWantToken(uint256 _shardPoolId) external override {
+        require(msg.sender == poolInfo[_shardPoolId].creator, "UNAUTHORIZED");
+        require(
+            poolInfo[_shardPoolId].state == ShardsState.Listed,
+            "WRONG_STATE"
+        );
+        address shardToken = shardInfo[_shardPoolId].shardToken;
+        address wantToken = poolInfo[_shardPoolId].wantToken;
+
+        require(!poolInfo[_shardPoolId].isCreatorWithDraw, "ALREADY WITHDRAW");
+        uint256 totalBalance = poolInfo[_shardPoolId].balanceOfWantToken;
+        uint256 platformAmount = shardInfo[_shardPoolId].shardForPlatform;
+        uint256 fee = poolInfo[_shardPoolId]
+            .balanceOfWantToken
+            .mul(platformAmount)
+            .div(shardInfo[_shardPoolId].shardForStakers);
+        uint256 amount = totalBalance.sub(fee);
+        poolInfo[_shardPoolId].isCreatorWithDraw = true;
+        TransferHelper.safeTransfer(
+            poolInfo[_shardPoolId].wantToken,
+            msg.sender,
+            amount
+        );
+    }
+
+    function applyforBuyout(uint256 _shardPoolId, uint256 wantTokenAmount)
+        external
+        override
+        returns (uint256 proposalId)
+    {
+        uint256 shardBalance = IShardToken(shardInfo[_shardPoolId].shardToken)
+            .balanceOf(msg.sender);
+        uint256 supply = shardInfo[_shardPoolId].totalShardSupply;
+        require(
+            shardBalance >= supply.mul(buyoutProportion).div(max),
+            "INSUFFIENT BALANCE"
+        );
+        require(
+            poolInfo[_shardPoolId].state == ShardsState.Listed,
+            "LISTED STATE IS REQUIRED"
+        );
+        uint256 currentPrice = getPrice(_shardPoolId);
+        uint256 needAmount = supply
+            .sub(shardBalance)
+            .mul(currentPrice)
+            .mul(buyoutTimes)
+            .div(1e18);
+        require(wantTokenAmount >= needAmount, "INSUFFICIENT wantTokenAmount");
+
+        TransferHelper.safeTransferFrom(
+            poolInfo[_shardPoolId].wantToken,
+            msg.sender,
+            address(this),
+            wantTokenAmount
+        );
+        TransferHelper.safeTransferFrom(
+            shardInfo[_shardPoolId].shardToken,
+            msg.sender,
+            address(this),
+            shardBalance
+        );
+        proposalId = proposolIdCount.add(1);
+        proposalIds[_shardPoolId] = proposalId;
+        uint256 timestamp = block.timestamp.add(voteLenth);
+        proposals[proposalId] = Proposal({
+            votesReceived: 0,
+            voteTotal: 0,
+            passed: false,
+            submitter: msg.sender,
+            voteDeadline: timestamp,
+            shardAmount: shardBalance,
+            wantTokenAmount: wantTokenAmount,
+            buyoutTimes: buyoutTimes,
+            price: currentPrice,
+            isSubmitterWithDraw: false,
+            shardPoolId: _shardPoolId,
+            isFailedConfirmed: false
+        });
+        proposalsHistory[proposalId].push(proposalId);
+        blocked[shardInfo[_shardPoolId].shardToken][msg.sender] = proposalId;
+        voted[proposalId][msg.sender] = true;
+        proposolIdCount = proposalId;
+        poolInfo[_shardPoolId].state = ShardsState.ApplyforBuyout;
+        emit ApplyforBuyout(
+            msg.sender,
+            proposalId,
+            _shardPoolId,
+            shardBalance,
+            wantTokenAmount,
+            timestamp,
+            buyoutTimes,
+            currentPrice
+        );
+    }
+
+    function vote(uint256 _shardPoolId, bool isAgree) external override {
+        uint256 balance = IShardToken(shardInfo[_shardPoolId].shardToken)
+            .balanceOf(msg.sender);
+        require(balance >= 0, "INSUFFICIENT VOTERIGHT");
+        require(
+            poolInfo[_shardPoolId].state == ShardsState.ApplyforBuyout,
+            "WRONG STATE"
+        );
+        uint256 proposalId = proposalIds[_shardPoolId];
+        require(
+            block.timestamp <= proposals[proposalId].voteDeadline,
+            "EXPIRED"
+        );
+        require(!voted[proposalId][msg.sender], "AlREADY VOITED");
+        blocked[shardInfo[_shardPoolId].shardToken][msg.sender] = proposalId;
+        voted[proposalId][msg.sender] = true;
+        if (isAgree) {
+            proposals[proposalId].votesReceived = proposals[proposalId]
+                .votesReceived
+                .add(balance);
+            proposals[proposalId].voteTotal = proposals[proposalId]
+                .voteTotal
+                .add(balance);
+        } else {
+            proposals[proposalId].voteTotal = proposals[proposalId]
+                .voteTotal
+                .add(balance);
+        }
+        emit Vote(msg.sender, proposalId, _shardPoolId, isAgree, balance);
+    }
+
+    function voteResultComfirm(uint256 _shardPoolId)
+        external
+        override
+        returns (bool result)
+    {
+        uint256 proposalId = proposalIds[_shardPoolId];
+        require(msg.sender == proposals[proposalId].submitter, "UNAUTHORIZED");
+        require(
+            block.timestamp > proposals[proposalId].voteDeadline,
+            "NOT READY"
+        );
+        require(
+            poolInfo[_shardPoolId].state == ShardsState.ApplyforBuyout,
+            "WRONG STATE"
+        );
+        if (
+            proposals[proposalId].votesReceived >=
+            proposals[proposalId].voteTotal.mul(passNeeded).div(max)
+        ) {
+            proposals[proposalId].passed = true;
+            result = true;
+            poolInfo[_shardPoolId].state = ShardsState.Buyout;
+            IShardToken(shardInfo[_shardPoolId].shardToken).burn(
+                address(this),
+                proposals[proposalId].shardAmount
+            );
+            IERC721(poolInfo[_shardPoolId].nft).safeTransferFrom(
+                address(this),
+                msg.sender,
+                poolInfo[_shardPoolId].tokenId
+            );
+        } else {
+            proposals[proposalId].passed = false;
+            proposals[proposalId].isFailedConfirmed = true;
+            result = false;
+            poolInfo[_shardPoolId].state = ShardsState.Listed;
+        }
+        emit VoteResultComfirm(
+            proposalId,
+            _shardPoolId,
+            proposals[proposalId].passed
+        );
+    }
+
+    function exchangeForWantToken(uint256 _shardPoolId, uint256 shardAmount)
+        external
+        override
+        returns (uint256 wantTokenAmount)
+    {
+        uint256 proposalId = proposalIds[_shardPoolId];
+        Proposal memory p = proposals[proposalId];
+        require(
+            poolInfo[_shardPoolId].state == ShardsState.Buyout,
+            "WRONG STATE"
+        );
+        TransferHelper.safeTransferFrom(
+            shardInfo[_shardPoolId].shardToken,
+            msg.sender,
+            address(this),
+            shardAmount
+        );
+        ShardToken(shardInfo[_shardPoolId].shardToken).burn(
+            address(this),
+            shardAmount
+        );
+        uint256 supply = shardInfo[_shardPoolId].totalShardSupply;
+        wantTokenAmount = shardAmount.mul(p.wantTokenAmount).div(
+            supply.sub(p.shardAmount)
+        );
+        TransferHelper.safeTransfer(
+            poolInfo[_shardPoolId].wantToken,
+            msg.sender,
+            wantTokenAmount
+        );
+    }
+
+    function redeemForBuyoutFailed(uint256 _proposalId)
+        external
+        override
+        returns (uint256 shardTokenAmount, uint256 wantTokenAmount)
+    {
+        Proposal memory p = proposals[_proposalId];
+        require(msg.sender == p.submitter, "UNAUTHORIZED");
+        require(
+            p.isFailedConfirmed && !p.isSubmitterWithDraw && !p.passed,
+            "WRONG_STATE"
+        );
+        proposals[_proposalId].isSubmitterWithDraw = true;
+        TransferHelper.safeTransfer(
+            shardInfo[p.shardPoolId].shardToken,
+            msg.sender,
+            p.shardAmount
+        );
+        TransferHelper.safeTransfer(
+            poolInfo[p.shardPoolId].wantToken,
+            msg.sender,
+            p.wantTokenAmount
+        );
+    }
+
+    //for test
+    function getShardBalance(address shardToken, address user)
+        public
+        view
+        returns (uint256 balance)
+    {
+        balance = ShardToken(shardToken).balanceOf(user);
+    }
+
+    function quote(
+        uint256 amountA,
+        uint256 reserveA,
+        uint256 reserveB
+    ) internal pure returns (uint256 amountB) {
+        require(amountA > 0, "UniswapV2Library: INSUFFICIENT_AMOUNT");
+        require(
+            reserveA > 0 && reserveB > 0,
+            "UniswapV2Library: INSUFFICIENT_LIQUIDITY"
+        );
+        amountB = amountA.mul(reserveB) / reserveA;
+    }
+
+    function getPrice(uint256 _shardPoolId)
+        public
+        view
+        returns (uint256 currentPrice)
+    {
+        address tokenA = shardInfo[_shardPoolId].shardToken;
+        address tokenB = poolInfo[_shardPoolId].wantToken;
+        address lPTokenAddress = IUniswapV2Factory(factory).getPair(
+            tokenA,
+            tokenB
+        );
+        (uint112 _reserve0, uint112 _reserve1, ) = IUniswapV2Pair(
+            lPTokenAddress
+        )
+            .getReserves();
+        (uint112 reserve0, uint112 reserve1) = tokenA < tokenB
+            ? (_reserve0, _reserve1)
+            : (_reserve1, _reserve0);
+        currentPrice = quote(1, reserve1, reserve0);
+    }
+
+    function _failToSetPrice(uint256 _shardPoolId) private {
+        poolInfo[_shardPoolId].state = ShardsState.SubscriptionFailed;
+        IERC721(poolInfo[_shardPoolId].nft).safeTransferFrom(
+            address(this),
+            poolInfo[_shardPoolId].creator,
+            poolInfo[_shardPoolId].tokenId
+        );
+        emit SettleFail(_shardPoolId);
+    }
+
+    function _successToSetPrice(uint256 _shardPoolId) private {
+        address shardToken = _deployShardsToken(_shardPoolId);
+        poolInfo[_shardPoolId].state = ShardsState.Listed;
+        shardInfo[_shardPoolId].shardToken = shardToken;
+        address wantToken = poolInfo[_shardPoolId].wantToken;
+        uint256 creatorAmount = shardInfo[_shardPoolId].shardForCreator;
+        uint256 platformAmount = shardInfo[_shardPoolId].shardForPlatform;
+        IShardToken(shardToken).mint(
+            poolInfo[_shardPoolId].creator,
+            creatorAmount
+        );
+        IShardToken(shardToken).mint(address(this), platformAmount);
+        //shardPrice = balanceOfWantToken / shardForStakers;
+        //fee= shardPrice * platformAmount =balanceOfWantToken * platformAmount / shardForStakers
+        uint256 fee = poolInfo[_shardPoolId]
+            .balanceOfWantToken
+            .mul(platformAmount)
+            .div(shardInfo[_shardPoolId].shardForStakers);
+        //addLiquidity
+        TransferHelper.safeApprove(shardToken, router, platformAmount);
+        TransferHelper.safeApprove(wantToken, router, fee);
+        IUniswapV2Router02(router).addLiquidity(
+            shardToken,
+            wantToken,
+            platformAmount,
+            fee,
+            0,
+            0,
+            address(this),
+            now.add(timeSpan)
+        );
+
+        emit SettleSuccess(
+            _shardPoolId,
+            creatorAmount,
+            platformAmount,
+            shardInfo[_shardPoolId].shardForStakers,
+            poolInfo[_shardPoolId].balanceOfWantToken,
+            fee
+        );
+    }
+
+    function setDeadlineForStake(uint256 _deadlineForStake) external override {
+        require(msg.sender == governance, "UNAUTHORIZED");
+        deadlineForStake = _deadlineForStake;
+    }
+
+    function setDeadlineForRedeem(uint256 _deadlineForRedeem)
+        external
+        override
+    {
+        require(msg.sender == governance, "UNAUTHORIZED");
+        deadlineForRedeem = _deadlineForRedeem;
+    }
+
+    function setShardsCreatorProportion(uint256 _shardsCreatorProportion)
+        external
+        override
+    {
+        require(msg.sender == governance, "UNAUTHORIZED");
+        shardsCreatorProportion = _shardsCreatorProportion;
+    }
+
+    function setPlatformProportion(uint256 _platformProportion)
+        external
+        override
+    {
+        require(msg.sender == governance, "UNAUTHORIZED");
+        platformProportion = _platformProportion;
+    }
+
+    function setBuyoutProportion(uint256 _buyoutProportion) external override {
+        require(msg.sender == governance, "UNAUTHORIZED");
+        buyoutProportion = _buyoutProportion;
+    }
+
+    function setBuyoutTimes(uint256 _buyoutTimes) external override {
+        require(msg.sender == governance, "UNAUTHORIZED");
+        buyoutTimes = _buyoutTimes;
+    }
+
+    function setVoteLenth(uint256 _voteLenth) external override {
+        require(msg.sender == governance, "UNAUTHORIZED");
+        voteLenth = _voteLenth;
+    }
+
+    function setPassNeeded(uint256 _passNeeded) external override {
+        require(msg.sender == governance, "UNAUTHORIZED");
+        passNeeded = _passNeeded;
+    }
+
+    function setTotalSupply(uint256 _totalSupply) external override {
+        require(msg.sender == governance, "UNAUTHORIZED");
+        totalSupply = _totalSupply;
+    }
+
+    function _deployShardsToken(uint256 _shardPoolId)
+        private
+        returns (address token)
+    {
+        string memory name = shardInfo[_shardPoolId].shardName;
+        string memory symbol = shardInfo[_shardPoolId].shardSymbol;
+        bytes memory bytecode = type(ShardToken).creationCode;
+        bytes32 salt = keccak256(abi.encodePacked(_shardPoolId, symbol, name));
+        assembly {
+            token := create2(0, add(bytecode, 32), mload(bytecode), salt)
+        }
+        IShardToken(token).initialize(
+            poolInfo[_shardPoolId].tokenId,
+            symbol,
+            name
+        );
+    }
+
+    function getAllPools() external view returns (uint256[] memory _pools) {
+        _pools = allPools;
+    }
+
+    function onERC721Received(
+        address _operator,
+        address _from,
+        uint256 _tokenId,
+        bytes calldata _data
+    ) external override returns (bytes4) {
+        _operator;
+        _from;
+        _tokenId;
+        _data;
+        return 0x150b7a02;
+    }
+}

@@ -1,14 +1,7 @@
 pragma solidity 0.6.12;
 
 interface IShardsMarket {
-    enum ShardsState {
-        Live,
-        Listed,
-        ApplyforBuyout,
-        Buyout,
-        BuyoutFailed,
-        SubscriptionFailed
-    }
+    enum ShardsState {Live, Listed, ApplyForBuyout, Buyout, SubscriptionFailed}
 
     /// 已开发
     //市场的碎片总供应量
@@ -56,10 +49,11 @@ interface IShardsMarket {
         uint256 platformAmount,
         uint256 shardForStakers,
         uint256 balanceOfWantToken,
-        uint256 fee
+        uint256 fee,
+        address shardToken
     );
     event SettleFail(uint256 indexed shardPoolId);
-    event ApplyforBuyout(
+    event ApplyForBuyout(
         address indexed sender,
         uint256 indexed proposalId,
         uint256 indexed _shardPoolId,
@@ -76,14 +70,14 @@ interface IShardsMarket {
         bool isAgree,
         uint256 voteAmount
     );
-    event VoteResultComfirm(
+    event VoteResultConfirm(
         uint256 indexed proposalId,
         uint256 indexed _shardPoolId,
         bool isPassed
     );
 
     //创建碎片
-    function createShared(
+    function createShard(
         address nft,
         uint256 _tokenId,
         string memory shardName,
@@ -113,7 +107,7 @@ interface IShardsMarket {
     function creatorWithdrawWantToken(uint256 _shardPoolId) external;
 
     //申请买断
-    function applyforBuyout(uint256 _shardPoolId, uint256 wantTokenAmount)
+    function applyForBuyout(uint256 _shardPoolId, uint256 wantTokenAmount)
         external
         returns (uint256 proposalId);
 
@@ -121,7 +115,7 @@ interface IShardsMarket {
     function vote(uint256 _shardPoolId, bool isAgree) external;
 
     //投票结果确认
-    function voteResultComfirm(uint256 _shardPoolId)
+    function voteResultConfirm(uint256 _shardPoolId)
         external
         returns (bool result);
 
@@ -131,7 +125,7 @@ interface IShardsMarket {
         returns (uint256 wantTokenAmount);
 
     //买断投票失败后取回质押的shard和wantToken
-    function redeemForBuyoutFailed(uint256 _shardPoolId)
+    function redeemForBuyoutFailed(uint256 _proposalId)
         external
         returns (uint256 shardTokenAmount, uint256 wantTokenAmount);
 
