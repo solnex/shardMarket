@@ -298,7 +298,7 @@ contract('NFTToken', (accounts) => {
         balance = "944444444444444445";
         assert.equal(userBalanceAfter, amountExpect);
     });
-    it('applyforBuyout  works', async () => {
+    it('applyForBuyout  works', async () => {
         await this.NFTToken.mint(100);
         await this.NFTToken.approve(this.ShardsMarket.address, 100);
         let amount = "1000000000000000000";
@@ -339,16 +339,16 @@ contract('NFTToken', (accounts) => {
 
         //INSUFFIENT BALANCE
         utils.assertThrowsAsynchronously(
-            () => this.ShardsMarket.applyforBuyout(1, amountNeed, { from: bob })
+            () => this.ShardsMarket.applyForBuyout(1, amountNeed, { from: bob })
         );
 
         price = await this.ShardsMarket.getPrice.call(1);
         assert.equal(price, openPrice);
-        await this.ShardsMarket.applyforBuyout(1, amountNeed, { from: alex });
+        await this.ShardsMarket.applyForBuyout(1, amountNeed, { from: alex });
 
         shardPoolInfo = await this.ShardsMarket.poolInfo.call(1);
-        assert.equal(shardPoolInfo[2], 2);//state : ApplyforBuyout
-        assert.equal(shardPoolInfo[11], openPrice);//state : ApplyforBuyout
+        assert.equal(shardPoolInfo[2], 2);//state : applyForBuyout
+        assert.equal(shardPoolInfo[11], openPrice);//state : applyForBuyout
         shardBalance = "9000000000000000000000";
         var voteInfo = await this.ShardsMarket.proposals.call(1);
         assert.equal(voteInfo[3], alex); //submmiter:alex
@@ -382,18 +382,33 @@ contract('NFTToken', (accounts) => {
         await this.MockWETH.approve(this.ShardsMarket.address, amountNeed, { from: alex });
 
 
-        await this.ShardsMarket.applyforBuyout(1, amountNeed, { from: alex });
+        await this.ShardsMarket.applyForBuyout(1, amountNeed, { from: alex });
 
         var voteInfo = await this.ShardsMarket.proposals.call(1);
         assert.equal(voteInfo[0], 0); //votesReceived:0
         assert.equal(voteInfo[1], 0); //voteTotal:0
+
+        //vote follow the block height 
+        amoutTransfer = "100000000000000000000";
+        await this.ShardToken.transfer(accounts[3], amoutTransfer, { from: bob });
+        //INSUFFICIENT VOTERIGHT
+        utils.assertThrowsAsynchronously(
+            () => this.ShardsMarket.vote(1, true, { from: accounts[3] })
+        );
+
         await this.ShardsMarket.vote(1, true, { from: bob });
 
         shardBalance = await this.ShardToken.balanceOf(bob);
-        shardBalance = "500000000000000000000";
+        shardBalanceExpect = "400000000000000000000";
+        assert.equal(shardBalance, shardBalanceExpect);
+
+        voteBalanace = await this.ShardToken.getPriorVotes(bob, voteInfo[12]);//blockHeight
+        voteBalanaceExpect = "500000000000000000000";
+        assert.equal(voteBalanace, voteBalanaceExpect);
+
         voteInfo = await this.ShardsMarket.proposals.call(1);
-        assert.equal(voteInfo[0], shardBalance); //votesReceived:0
-        assert.equal(voteInfo[1], shardBalance); //voteTotal:0
+        assert.equal(voteInfo[0], voteBalanaceExpect); //votesReceived:0
+        assert.equal(voteInfo[1], voteBalanaceExpect); //voteTotal:0
     });
 
     it('voteResultConfirm success works', async () => {
@@ -421,7 +436,7 @@ contract('NFTToken', (accounts) => {
         await this.ShardToken.approve(this.ShardsMarket.address, shardBalance, { from: alex });
         await this.MockWETH.approve(this.ShardsMarket.address, amountNeed, { from: alex });
 
-        await this.ShardsMarket.applyforBuyout(1, amountNeed, { from: alex });
+        await this.ShardsMarket.applyForBuyout(1, amountNeed, { from: alex });
         await this.ShardsMarket.vote(1, true, { from: bob });
 
         voteInfo = await this.ShardsMarket.proposals.call(1);
@@ -465,7 +480,7 @@ contract('NFTToken', (accounts) => {
         await this.ShardToken.approve(this.ShardsMarket.address, shardBalance, { from: alex });
         await this.MockWETH.approve(this.ShardsMarket.address, amountNeed, { from: alex });
 
-        await this.ShardsMarket.applyforBuyout(1, amountNeed, { from: alex });
+        await this.ShardsMarket.applyForBuyout(1, amountNeed, { from: alex });
         await this.ShardsMarket.vote(1, false, { from: bob });
 
         voteInfo = await this.ShardsMarket.proposals.call(1);
@@ -509,7 +524,7 @@ contract('NFTToken', (accounts) => {
         await this.ShardToken.approve(this.ShardsMarket.address, shardBalance, { from: alex });
         await this.MockWETH.approve(this.ShardsMarket.address, amountNeed, { from: alex });
 
-        await this.ShardsMarket.applyforBuyout(1, amountNeed, { from: alex });
+        await this.ShardsMarket.applyForBuyout(1, amountNeed, { from: alex });
         await this.ShardsMarket.vote(1, false, { from: bob });
 
         voteInfo = await this.ShardsMarket.proposals.call(1);
@@ -558,7 +573,7 @@ contract('NFTToken', (accounts) => {
         await this.ShardToken.approve(this.ShardsMarket.address, shardBalance, { from: alex });
         await this.MockWETH.approve(this.ShardsMarket.address, amountNeed, { from: alex });
 
-        await this.ShardsMarket.applyforBuyout(1, amountNeed, { from: alex });
+        await this.ShardsMarket.applyForBuyout(1, amountNeed, { from: alex });
         await this.ShardsMarket.vote(1, true, { from: bob });
 
         voteInfo = await this.ShardsMarket.proposals.call(1);

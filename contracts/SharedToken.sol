@@ -14,14 +14,14 @@ contract ShardToken is IShardToken {
     mapping(address => mapping(address => uint256)) public override allowance;
 
     struct Checkpoint {
-        uint32 fromBlock;
-        uint96 votes;
+        uint256 fromBlock;
+        uint256 votes;
     }
     /// @notice A record of votes checkpoints for each account, by index
-    mapping(address => mapping(uint32 => Checkpoint)) public checkpoints;
+    mapping(address => mapping(uint256 => Checkpoint)) public checkpoints;
 
     /// @notice The number of checkpoints for each account
-    mapping(address => uint32) public numCheckpoints;
+    mapping(address => uint256) public numCheckpoints;
 
     uint256 public tokenId;
     address public market;
@@ -32,6 +32,11 @@ contract ShardToken is IShardToken {
         uint256 value
     );
     event Transfer(address indexed from, address indexed to, uint256 value);
+    event VotesBalanceChanged(
+        address indexed user,
+        uint256 previousBalance,
+        uint256 newBalance
+    );
 
     constructor() public {
         market = msg.sender;
@@ -41,6 +46,8 @@ contract ShardToken is IShardToken {
         totalSupply = totalSupply.add(value);
         balanceOf[to] = balanceOf[to].add(value);
         emit Transfer(address(0), to, value);
+
+        _voteTransfer(address(0), to, value);
     }
 
     function _burn(address from, uint256 value) internal {
@@ -66,6 +73,8 @@ contract ShardToken is IShardToken {
         balanceOf[from] = balanceOf[from].sub(value);
         balanceOf[to] = balanceOf[to].add(value);
         emit Transfer(from, to, value);
+
+        _voteTransfer(from, to, value);
     }
 
     function approve(address spender, uint256 value)
@@ -119,5 +128,93 @@ contract ShardToken is IShardToken {
         tokenId = _tokenId;
         name = _name;
         symbol = _symbol;
+    }
+
+    function getPriorVotes(address account, uint256 blockNumber)
+        public
+        override
+        view
+        returns (uint256)
+    {
+        require(
+            blockNumber < block.number,
+            "getPriorVotes: not yet determined"
+        );
+
+        uint256 nCheckpoints = numCheckpoints[account];
+        if (nCheckpoints == 0) {
+            return 0;
+        }
+
+        // First check most recent balance
+        if (checkpoints[account][nCheckpoints - 1].fromBlock <= blockNumber) {
+            return checkpoints[account][nCheckpoints - 1].votes;
+        }
+
+        // Next check implicit zero balance
+        if (checkpoints[account][0].fromBlock > blockNumber) {
+            return 0;
+        }
+
+        uint256 lower = 0;
+        uint256 upper = nCheckpoints - 1;
+        while (upper > lower) {
+            uint256 center = upper - (upper - lower) / 2; // ceil, avoiding overflow
+            Checkpoint memory cp = checkpoints[account][center];
+            if (cp.fromBlock == blockNumber) {
+                return cp.votes;
+            } else if (cp.fromBlock < blockNumber) {
+                lower = center;
+            } else {
+                upper = center - 1;
+            }
+        }
+        return checkpoints[account][lower].votes;
+    }
+
+    function _voteTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal {
+        if (from != to && amount > 0) {
+            if (from != address(0)) {
+                uint256 fromNum = numCheckpoints[from];
+                uint256 fromOld = fromNum > 0
+                    ? checkpoints[from][fromNum - 1].votes
+                    : 0;
+                uint256 fromNew = fromOld.sub(amount);
+                _writeCheckpoint(from, fromNum, fromOld, fromNew);
+            }
+
+            if (to != address(0)) {
+                uint256 toNum = numCheckpoints[to];
+                uint256 toOld = toNum > 0
+                    ? checkpoints[to][toNum - 1].votes
+                    : 0;
+                uint256 toNew = toOld.add(amount);
+                _writeCheckpoint(to, toNum, toOld, toNew);
+            }
+        }
+    }
+
+    function _writeCheckpoint(
+        address user,
+        uint256 nCheckpoints,
+        uint256 oldVotes,
+        uint256 newVotes
+    ) internal {
+        uint256 blockNumber = block.number;
+        if (
+            nCheckpoints > 0 &&
+            checkpoints[user][nCheckpoints - 1].fromBlock == blockNumber
+        ) {
+            checkpoints[user][nCheckpoints - 1].votes = newVotes;
+        } else {
+            checkpoints[user][nCheckpoints] = Checkpoint(blockNumber, newVotes);
+            numCheckpoints[user] = nCheckpoints + 1;
+        }
+
+        emit VotesBalanceChanged(user, oldVotes, newVotes);
     }
 }

@@ -42,4 +42,9 @@ interface IShardToken {
         string memory _symbol,
         string memory _name
     ) external;
+
+    function getPriorVotes(address account, uint256 blockNumber)
+        external
+        view
+        returns (uint256);
 }

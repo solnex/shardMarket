@@ -88,7 +88,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
     //每个NFT对应的投票id
     mapping(uint256 => uint256) public proposalIds;
 
-    mapping(uint256 => uint256[]) public proposalsHistory;
+    mapping(uint256 => uint256[]) private proposalsHistory;
     //投票
     mapping(uint256 => Proposal) public proposals;
     //用户是否已经投票
@@ -111,6 +111,8 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
         bool isSubmitterWithDraw;
         uint256 shardPoolId;
         bool isFailedConfirmed;
+        uint256 blockHeight;
+        uint256 createTime;
     }
 
     uint256 private timeSpan = 60;
@@ -316,8 +318,6 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             poolInfo[_shardPoolId].state == ShardsState.Listed,
             "WRONG_STATE"
         );
-        address shardToken = shardInfo[_shardPoolId].shardToken;
-        address wantToken = poolInfo[_shardPoolId].wantToken;
 
         require(!poolInfo[_shardPoolId].isCreatorWithDraw, "ALREADY WITHDRAW");
         uint256 totalBalance = poolInfo[_shardPoolId].balanceOfWantToken;
@@ -386,7 +386,9 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             price: currentPrice,
             isSubmitterWithDraw: false,
             shardPoolId: _shardPoolId,
-            isFailedConfirmed: false
+            isFailedConfirmed: false,
+            blockHeight: block.number,
+            createTime: block.timestamp
         });
         proposalsHistory[proposalId].push(proposalId);
         blocked[shardInfo[_shardPoolId].shardToken][msg.sender] = proposalId;
@@ -401,19 +403,21 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             wantTokenAmount,
             timestamp,
             buyoutTimes,
-            currentPrice
+            currentPrice,
+            block.number
         );
     }
 
     function vote(uint256 _shardPoolId, bool isAgree) external override {
+        uint256 proposalId = proposalIds[_shardPoolId];
+        uint256 blockHeight = proposals[proposalId].blockHeight;
         uint256 balance = IShardToken(shardInfo[_shardPoolId].shardToken)
-            .balanceOf(msg.sender);
-        require(balance >= 0, "INSUFFICIENT VOTERIGHT");
+            .getPriorVotes(msg.sender, blockHeight);
+        require(balance > 0, "INSUFFICIENT VOTERIGHT");
         require(
             poolInfo[_shardPoolId].state == ShardsState.ApplyForBuyout,
             "WRONG STATE"
         );
-        uint256 proposalId = proposalIds[_shardPoolId];
         require(
             block.timestamp <= proposals[proposalId].voteDeadline,
             "EXPIRED"
@@ -523,6 +527,8 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             p.isFailedConfirmed && !p.isSubmitterWithDraw && !p.passed,
             "WRONG_STATE"
         );
+        shardTokenAmount = p.shardAmount;
+        wantTokenAmount = p.wantTokenAmount;
         proposals[_proposalId].isSubmitterWithDraw = true;
         TransferHelper.safeTransfer(
             shardInfo[p.shardPoolId].shardToken,
@@ -710,6 +716,14 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
 
     function getAllPools() external view returns (uint256[] memory _pools) {
         _pools = allPools;
+    }
+
+    function getProposalsHistory(uint256 _shardPoolId)
+        external
+        view
+        returns (uint256[] memory _proposalsHistory)
+    {
+        _proposalsHistory = proposalsHistory[_shardPoolId];
     }
 
     function onERC721Received(

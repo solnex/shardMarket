@@ -61,7 +61,8 @@ interface IShardsMarket {
         uint256 wantTokenAmount,
         uint256 voteDeadline,
         uint256 buyoutTimes,
-        uint256 price
+        uint256 price,
+        uint256 blockHeight
     );
     event Vote(
         address indexed sender,
