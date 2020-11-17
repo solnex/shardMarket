@@ -72,6 +72,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
         uint256 shardForCreator; //给创建者的数量
         uint256 shardForPlatform; //给平台的数量
         uint256 shardForStakers; //给抵押人的数量
+        uint256 burnAmount;
     }
     //每个shardpool对应的user信息
     mapping(uint256 => mapping(address => UserInfo)) public userInfo;
@@ -168,7 +169,8 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             totalShardSupply: totalSupply,
             shardForCreator: creatorAmount,
             shardForPlatform: platformAmount,
-            shardForStakers: stakersAmount
+            shardForStakers: stakersAmount,
+            burnAmount: 0
         });
         allPools.push(shardPoolId);
         shardPoolIdCount = shardPoolId;
@@ -466,6 +468,9 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
                 address(this),
                 proposals[proposalId].shardAmount
             );
+            shardInfo[_shardPoolId].burnAmount = shardInfo[_shardPoolId]
+                .burnAmount
+                .add(proposals[proposalId].shardAmount);
             IERC721(poolInfo[_shardPoolId].nft).safeTransferFrom(
                 address(this),
                 msg.sender,
@@ -501,10 +506,13 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             address(this),
             shardAmount
         );
-        ShardToken(shardInfo[_shardPoolId].shardToken).burn(
+        IShardToken(shardInfo[_shardPoolId].shardToken).burn(
             address(this),
             shardAmount
         );
+        shardInfo[_shardPoolId].burnAmount = shardInfo[_shardPoolId]
+            .burnAmount
+            .add(shardAmount);
         uint256 supply = shardInfo[_shardPoolId].totalShardSupply;
         wantTokenAmount = shardAmount.mul(p.wantTokenAmount).div(
             supply.sub(p.shardAmount)
