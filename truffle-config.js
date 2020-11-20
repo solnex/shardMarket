@@ -23,7 +23,7 @@ module.exports = {
       host: "127.0.0.1",     // Localhost (default: none)
       port: 8545,            // Standard Ethereum port (default: none)
       network_id: "*",       // Any network (default: none)
-      gas: 3002388,
+      gas: 5002388,
       gasPrice: 30000000000
     },
     kovan: {
