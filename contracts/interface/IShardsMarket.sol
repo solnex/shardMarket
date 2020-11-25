@@ -36,7 +36,7 @@ interface IShardsMarket {
         uint256 _tokenId,
         string shardName,
         string shardSymbol,
-        uint256 minPrice,
+        uint256 minWantTokenAmount,
         uint256 createTime,
         uint256 totalSupply,
         address wantToken
@@ -83,7 +83,7 @@ interface IShardsMarket {
         uint256 _tokenId,
         string memory shardName,
         string memory shardSymbol,
-        uint256 minPrice,
+        uint256 minWantTokenAmount,
         address wantToken
     ) external returns (uint256 shardPoolId);
 
