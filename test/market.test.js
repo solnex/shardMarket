@@ -348,10 +348,14 @@ contract('NFTToken', (accounts) => {
         await this.ShardsMarket.applyForBuyout(1, amountLimit, { from: alex });
 
         shardPoolInfo = await this.ShardsMarket.poolInfo.call(1);
+
+        shardInfo = await this.ShardsMarket.shardInfo.call(1);
         assert.equal(shardPoolInfo[2], 2);//state : applyForBuyout
-        assert.equal(shardPoolInfo[11], openPrice);//state : applyForBuyout
+        assert.equal(shardPoolInfo[11], openPrice);
         shardBalance = "9000000000000000000000";
         var voteInfo = await this.ShardsMarket.proposals.call(1);
+
+        amountNeed = (shardInfo[3] - voteInfo[5]) * price / 1e18;
         assert.equal(voteInfo[3], alex); //submmiter:alex
         assert.equal(voteInfo[5], shardBalance); //shardAmount:9000000000000000000000
         assert.equal(voteInfo[6], amountNeed); //wantTokenAmount:3111111111111110000
@@ -459,8 +463,8 @@ contract('NFTToken', (accounts) => {
         //profit test 
         devProfit = await this.MockWETH.balanceOf(dev, { from: dev });
         tokenBarProfit = await this.MockWETH.balanceOf(tokenBar, { from: tokenBar });
-        assert.equal(devProfit, 33333333333333304n);
-        assert.equal(tokenBarProfit, 133333333333333218n);
+        assert.equal(devProfit, 22222222222222206n);
+        assert.equal(tokenBarProfit, 88888888888888827n);
     });
     it('voteResultConfirm fail works', async () => {
         await this.NFTToken.mint(100);

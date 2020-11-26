@@ -42,7 +42,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
     //max
     uint256 private constant max = 100;
     //买断倍数
-    uint256 public override buyoutTimes = 2;
+    uint256 public override buyoutTimes = 1;
     //shardPoolId
     uint256 public shardPoolIdCount;
     //所有的shardpool的Id
@@ -197,7 +197,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
     function stake(uint256 _shardPoolId, uint256 amount) external override {
         require(
             block.timestamp <= poolInfo[_shardPoolId].deadlineForStake,
-            "NFT:EXPIRED"
+            "EXPIRED"
         );
         address wantToken = poolInfo[_shardPoolId].wantToken;
         TransferHelper.safeTransferFrom(
@@ -212,7 +212,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
     function stakeETH(uint256 _shardPoolId) external override payable {
         require(
             block.timestamp <= poolInfo[_shardPoolId].deadlineForStake,
-            "NFT:EXPIRED"
+            "EXPIRED"
         );
         require(poolInfo[_shardPoolId].wantToken == WETH, "UNWANTED");
         IWETH(WETH).deposit{value: msg.value}();
@@ -233,7 +233,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
     function redeem(uint256 _shardPoolId, uint256 amount) external override {
         require(
             block.timestamp <= poolInfo[_shardPoolId].deadlineForRedeem,
-            "NFT:EXPIRED"
+            "EXPIRED"
         );
         // require(
         //     userInfo[_shardPoolId][msg.sender].amount >= amount,
@@ -257,11 +257,11 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
     function settle(uint256 _shardPoolId) external override {
         require(
             block.timestamp > poolInfo[_shardPoolId].deadlineForRedeem,
-            "NFT:NOT READY"
+            "NOT READY"
         );
         require(
             poolInfo[_shardPoolId].state == ShardsState.Live,
-            "NFT:LIVE STATE IS REQUIRED"
+            "LIVE STATE IS REQUIRED"
         );
         if (
             poolInfo[_shardPoolId].balanceOfWantToken <
@@ -285,7 +285,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
     {
         require(
             poolInfo[_shardPoolId].state == ShardsState.SubscriptionFailed,
-            "WRONG_STATE"
+            "WRONG STATE"
         );
         uint256 balance = userInfo[_shardPoolId][msg.sender].amount;
         require(balance > 0, "INSUFFIENT BALANCE");
@@ -332,7 +332,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
         require(msg.sender == poolInfo[_shardPoolId].creator, "UNAUTHORIZED");
         require(
             poolInfo[_shardPoolId].state == ShardsState.Listed,
-            "WRONG_STATE"
+            "WRONG STATE"
         );
 
         require(!poolInfo[_shardPoolId].isCreatorWithDraw, "ALREADY WITHDRAW");
@@ -373,7 +373,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             .mul(currentPrice)
             .mul(buyoutTimes)
             .div(1e18);
-        require(wantTokenAmount >= needAmount, "INSUFFICIENT wantTokenAmount");
+        require(wantTokenAmount >= needAmount, "INSUFFICIENT WANTTOKENAMOUNT");
 
         TransferHelper.safeTransferFrom(
             poolInfo[_shardPoolId].wantToken,
@@ -473,7 +473,8 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
         );
         if (
             proposals[proposalId].votesReceived >=
-            proposals[proposalId].voteTotal.mul(passNeeded).div(max)
+            proposals[proposalId].voteTotal.mul(passNeeded).div(max) &&
+            proposals[proposalId].voteTotal != 0
         ) {
             proposals[proposalId].passed = true;
             result = true;
@@ -544,7 +545,7 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
         require(msg.sender == p.submitter, "UNAUTHORIZED");
         require(
             p.isFailedConfirmed && !p.isSubmitterWithDraw && !p.passed,
-            "WRONG_STATE"
+            "WRONG STATE"
         );
         shardTokenAmount = p.shardAmount;
         wantTokenAmount = p.wantTokenAmount;
