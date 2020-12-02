@@ -45,7 +45,7 @@ interface IShardsMarket {
     event Redeem(address indexed sender, uint256 shardPoolId, uint256 amount);
     event SettleSuccess(
         uint256 indexed shardPoolId,
-        uint256 creatorAmount,
+        // uint256 creatorAmount,
         uint256 platformAmount,
         uint256 shardForStakers,
         uint256 balanceOfWantToken,

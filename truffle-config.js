@@ -9,10 +9,8 @@ console.log(result.parsed);
 var HDWalletProvider = require("truffle-hdwallet-provider");
 
 /*访问https://infura.io/注册后获取的api-key*/
-var infura_apikey = "89da3e2e7a1b4cc08fc6887c6496dc75";
-
-/*读取.env文件配置的助记词*/
-var mnemonic_kovan = process.env.mnemonic_kovan;
+var infura_apikey = "14d6b3c965f84da4b3c19ea36827287e";
+var keys = [process.env.kovan_key0, process.env.kovan_key1, process.env.kovan_key2, process.env.kovan_key3];
 //var mnemonic_mainnet = process.env.mnemonic_mainnet;
 module.exports = {
 
@@ -27,7 +25,7 @@ module.exports = {
       gasPrice: 30000000000
     },
     kovan: {
-      provider: new HDWalletProvider(mnemonic_kovan, "https://kovan.infura.io/v3/" + infura_apikey),
+      provider: new HDWalletProvider(keys, "https://kovan.infura.io/v3/" + infura_apikey, 0, 4),
       network_id: 42,
       gas: 3012388,
       gasPrice: 30000000000

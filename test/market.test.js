@@ -358,7 +358,7 @@ contract('NFTToken', (accounts) => {
         amountNeed = (shardInfo[3] - voteInfo[5]) * price / 1e18;
         assert.equal(voteInfo[3], alex); //submmiter:alex
         assert.equal(voteInfo[5], shardBalance); //shardAmount:9000000000000000000000
-        assert.equal(voteInfo[6], amountNeed); //wantTokenAmount:3111111111111110000
+        assert.equal(voteInfo[6], amountLimit); //wantTokenAmount:3111111111111110000
 
     });
     it('vote  works', async () => {
@@ -375,6 +375,7 @@ contract('NFTToken', (accounts) => {
         deadlineForRedeem = 604800 + 20;
         await mine(deadlineForRedeem); //skip to  deadlineForRedeem
         await this.ShardsMarket.settle(1, { from: bob, gas: 6000000 });
+        await this.ShardsMarket.creatorWithdrawWantToken(1, { from: bob });
         await this.ShardsMarket.usersWithdrawShardToken(1, { from: alex });
         //approve
         shardInfo = await this.ShardsMarket.shardInfo.call(1);
@@ -430,6 +431,7 @@ contract('NFTToken', (accounts) => {
         deadlineForRedeem = 604800 + 20;
         await mine(deadlineForRedeem); //skip to  deadlineForRedeem
         await this.ShardsMarket.settle(1, { from: bob, gas: 6000000 });
+        await this.ShardsMarket.creatorWithdrawWantToken(1, { from: bob });
         await this.ShardsMarket.usersWithdrawShardToken(1, { from: alex });
         //approve
         var shardPoolInfo = await this.ShardsMarket.poolInfo.call(1);
@@ -463,8 +465,10 @@ contract('NFTToken', (accounts) => {
         //profit test 
         devProfit = await this.MockWETH.balanceOf(dev, { from: dev });
         tokenBarProfit = await this.MockWETH.balanceOf(tokenBar, { from: tokenBar });
-        assert.equal(devProfit, 22222222222222206n);
-        assert.equal(tokenBarProfit, 88888888888888827n);
+        devProfitExpect = 122222222222222080;
+        tokenBarProfitExpect = 488888888888888300;
+        assert.equal(devProfit, devProfitExpect);
+        assert.equal(tokenBarProfit, tokenBarProfitExpect);
     });
     it('voteResultConfirm fail works', async () => {
         await this.NFTToken.mint(100);
@@ -480,6 +484,7 @@ contract('NFTToken', (accounts) => {
         deadlineForRedeem = 604800 + 20;
         await mine(deadlineForRedeem); //skip to  deadlineForRedeem
         await this.ShardsMarket.settle(1, { from: bob, gas: 6000000 });
+        await this.ShardsMarket.creatorWithdrawWantToken(1, { from: bob });
         await this.ShardsMarket.usersWithdrawShardToken(1, { from: alex });
         //approve
         var shardPoolInfo = await this.ShardsMarket.poolInfo.call(1);
@@ -524,6 +529,7 @@ contract('NFTToken', (accounts) => {
         deadlineForRedeem = 604800 + 20;
         await mine(deadlineForRedeem); //skip to  deadlineForRedeem
         await this.ShardsMarket.settle(1, { from: bob, gas: 6000000 });
+        await this.ShardsMarket.creatorWithdrawWantToken(1, { from: bob });
         await this.ShardsMarket.usersWithdrawShardToken(1, { from: alex });
         //approve
         var shardPoolInfo = await this.ShardsMarket.poolInfo.call(1);
@@ -573,6 +579,7 @@ contract('NFTToken', (accounts) => {
         deadlineForRedeem = 604800 + 20;
         await mine(deadlineForRedeem); //skip to  deadlineForRedeem
         await this.ShardsMarket.settle(1, { from: bob, gas: 6000000 });
+        await this.ShardsMarket.creatorWithdrawWantToken(1, { from: bob });
         await this.ShardsMarket.usersWithdrawShardToken(1, { from: alex });
         //approve
         var shardPoolInfo = await this.ShardsMarket.poolInfo.call(1);
