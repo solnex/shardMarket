@@ -16,11 +16,11 @@ var accountAdmin = "0x2E7c4EfdFA6680e34988dcBD70F6a31b4CC28219";
 
 // contract address
 var NFTTokenAddress = "0x8549996Db3EC43558fE051fF63E8382f77EAb37c";
-var ShardsMarketAddress = "0xEe11D1cfB3f1f882631c0a27921FdC683Ed006fa";
+var ShardsMarketAddress = "0xE67afdE9Af02542F6dFeFbfC30B58024D7a4a60e";
 var wantTokenAddress = "0xB5685232b185cAdF7C5F58217722Ac40BC4ec45e";
 
 // parameter
-var tokenId = 11110001;
+var tokenId = 21110001;
 var poolId = 1;
 var proposalId = 1;
 var name = "Shard0";
@@ -47,8 +47,6 @@ module.exports = async function (callback) {
     this.NFTToken = await NFTToken.at(NFTTokenAddress);
     this.ShardsMarket = await ShardsMarket.at(ShardsMarketAddress);
     this.MockERC20Token = await MockERC20Token.at(wantTokenAddress);
-    var address = await this.NFTToken.ownerOf(tokenId, { from: account1 });
-    console.log("address", address);
     //认购中：
     console.log("认购中状态创建:");
     await this.NFTToken.mint(tokenId, { from: account1 });
@@ -173,8 +171,8 @@ module.exports = async function (callback) {
     this.ShardToken = await ShardToken.at(shardInfo[2]);
     shardBalance = await this.ShardToken.balanceOf.call(account2);
     console.log("shardBalance:", shardBalance);
-    // result = await this.ShardToken.approve(this.ShardsMarket.address, shardBalance, { from: account2 });
-    // console.log("shardBalance:", result);
+    result = await this.ShardToken.approve(this.ShardsMarket.address, shardBalance, { from: account2 });
+    console.log("shardBalance:", result);
     result = await this.MockERC20Token.approve(ShardsMarketAddress, applyForBuyoutAmount, { from: account2 });
     console.log("approved", result);
     result = await this.ShardsMarket.applyForBuyout(poolId, applyForBuyoutAmount, { from: account2 });
@@ -195,7 +193,7 @@ module.exports = async function (callback) {
 
     await this.ShardsMarket.setDeadlineForRedeem(10, { from: accountAdmin });
     console.log("setDeadlineForRedeem:", result);
-    result = await this.ShardsMarket.createShard(NFTTokenAddress, tokenId, name + "3", name + "3", minPrice, wantTokenAddress, { from: account1 });
+    result = await this.ShardsMarket.createShard(NFTTokenAddress, tokenId, name + "4", name + "4", minPrice, wantTokenAddress, { from: account1 });
     console.log("createShard:", result);
     result = await this.MockERC20Token.approve(ShardsMarketAddress, stakeAmount5, { from: account2 });
     console.log("approved:", result);
@@ -229,7 +227,7 @@ module.exports = async function (callback) {
     console.log("setVoteLenth:", result);
     result = await this.ShardsMarket.applyForBuyout(poolId, applyForBuyoutAmount, { from: account2 });
     console.log("applyForBuyout:", result);
-    result = await this.ShardsMarket.vote(proposalId, false, { from: account3 });
+    result = await this.ShardsMarket.vote(poolId, false, { from: account3 });
     console.log("vote:", result);
     sleep(11000);
     result = await this.ShardsMarket.voteResultConfirm(poolId);
@@ -251,7 +249,7 @@ module.exports = async function (callback) {
 
     await this.ShardsMarket.setDeadlineForRedeem(10, { from: accountAdmin });
     console.log("setDeadlineForRedeem:", result);
-    result = await this.ShardsMarket.createShard(NFTTokenAddress, tokenId, name + "3", name + "3", minPrice, wantTokenAddress, { from: account1 });
+    result = await this.ShardsMarket.createShard(NFTTokenAddress, tokenId, name + "5", name + "5", minPrice, wantTokenAddress, { from: account1 });
     console.log("createShard:", result);
     result = await this.MockERC20Token.approve(ShardsMarketAddress, stakeAmount5, { from: account2 });
     console.log("approved:", result);
@@ -285,7 +283,7 @@ module.exports = async function (callback) {
     console.log("setVoteLenth:", result);
     result = await this.ShardsMarket.applyForBuyout(poolId, applyForBuyoutAmount, { from: account2 });
     console.log("applyForBuyout:", result);
-    result = await this.ShardsMarket.vote(proposalId, true, { from: account3 });
+    result = await this.ShardsMarket.vote(poolId, true, { from: account3 });
     console.log("vote:", result);
     sleep(11000);
     result = await this.ShardsMarket.voteResultConfirm(poolId);

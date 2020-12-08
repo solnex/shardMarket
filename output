@@ -223,7 +223,8 @@ interface IShardToken {
 }
 
 // File: openzeppelin-solidity/contracts/math/SafeMath.sol
- 
+
+// SPDX-License-Identifier: MIT
 
 pragma solidity ^0.6.0;
 
@@ -763,7 +764,7 @@ library NFTLibrary {
 
 // File: openzeppelin-solidity/contracts/introspection/IERC165.sol
 
- 
+
 
 pragma solidity ^0.6.0;
 
@@ -789,6 +790,7 @@ interface IERC165 {
 }
 
 // File: openzeppelin-solidity/contracts/token/ERC721/IERC721.sol
+
  
 
 pragma solidity ^0.6.2;
@@ -920,7 +922,7 @@ interface IERC721 is IERC165 {
 
 // File: openzeppelin-solidity/contracts/token/ERC721/IERC721Receiver.sol
 
-// SPDX-License-Identifier: MIT
+ 
 
 pragma solidity ^0.6.0;
 
@@ -1476,10 +1478,17 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             poolInfo[_shardPoolId].state == ShardsState.ApplyForBuyout,
             "WRONG STATE"
         );
+        uint256 votesRejected = proposals[proposalId].voteTotal.sub(
+            proposals[proposalId].votesReceived
+        );
+        uint256 rejectNeed = max.sub(passNeeded);
         if (
-            proposals[proposalId].votesReceived >=
-            proposals[proposalId].voteTotal.mul(passNeeded).div(max) &&
-            proposals[proposalId].voteTotal != 0
+            votesRejected <=
+            shardInfo[_shardPoolId]
+                .totalShardSupply
+                .sub(proposals[proposalId].shardAmount)
+                .mul(rejectNeed)
+                .div(max)
         ) {
             proposals[proposalId].passed = true;
             result = true;

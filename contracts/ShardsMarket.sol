@@ -480,10 +480,17 @@ contract ShardsMarket is IShardsMarket, IERC721Receiver {
             poolInfo[_shardPoolId].state == ShardsState.ApplyForBuyout,
             "WRONG STATE"
         );
+        uint256 votesRejected = proposals[proposalId].voteTotal.sub(
+            proposals[proposalId].votesReceived
+        );
+        uint256 rejectNeed = max.sub(passNeeded);
         if (
-            proposals[proposalId].votesReceived >=
-            proposals[proposalId].voteTotal.mul(passNeeded).div(max) &&
-            proposals[proposalId].voteTotal != 0
+            votesRejected <=
+            shardInfo[_shardPoolId]
+                .totalShardSupply
+                .sub(proposals[proposalId].shardAmount)
+                .mul(rejectNeed)
+                .div(max)
         ) {
             proposals[proposalId].passed = true;
             result = true;
