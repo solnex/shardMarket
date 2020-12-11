@@ -16,11 +16,11 @@ var accountAdmin = "0x2E7c4EfdFA6680e34988dcBD70F6a31b4CC28219";
 
 // contract address
 var NFTTokenAddress = "0x8549996Db3EC43558fE051fF63E8382f77EAb37c";
-var ShardsMarketAddress = "0xE67afdE9Af02542F6dFeFbfC30B58024D7a4a60e";
+var ShardsMarketAddress = "0x6cBA5138D292EE871F10e81E551bdD100Ad25B9B";
 var wantTokenAddress = "0xB5685232b185cAdF7C5F58217722Ac40BC4ec45e";
 
 // parameter
-var tokenId = 21110001;
+var tokenId = 31110006;
 var poolId = 1;
 var proposalId = 1;
 var name = "Shard0";
@@ -51,7 +51,7 @@ module.exports = async function (callback) {
     console.log("认购中状态创建:");
     await this.NFTToken.mint(tokenId, { from: account1 });
     await this.NFTToken.approve(ShardsMarketAddress, tokenId, { from: account1 });
-    var result = await this.ShardsMarket.createShard(NFTTokenAddress, tokenId, name, name, minPrice, wantTokenAddress, { from: account1 });
+    var result = await this.ShardsMarket.createShard(NFTTokenAddress, tokenId, name + "0", name + "0", minPrice, wantTokenAddress, { from: account1 });
     console.log("address", result);
 
     result = await this.MockERC20Token.approve(ShardsMarketAddress, stakeAmount1, { from: account2 });
@@ -90,14 +90,7 @@ module.exports = async function (callback) {
     sleep(10000);
     result = await this.ShardsMarket.settle(poolId, { from: account1, gas: 6000000 });
     console.log("settle:", result);
-    result = await this.ShardsMarket.creatorWithdrawWantToken(poolId, { from: account1 });
-    console.log("creatorWithdrawWantToken:", result);
-    result = await this.ShardsMarket.usersWithdrawShardToken(poolId, { from: account2 });
-    console.log("usersWithdrawShardToken:", result);
-    result = await this.ShardsMarket.usersWithdrawShardToken(poolId, { from: account3 });
-    console.log("usersWithdrawShardToken:", result);
-    result = await this.ShardsMarket.setDeadlineForRedeem(604800, { from: accountAdmin });
-    console.log("setDeadlineForRedeem:", result);
+
     // //认购失败：
     console.log("认购失败状态创建:");
     tokenId++;
@@ -125,10 +118,7 @@ module.exports = async function (callback) {
     sleep(10000);
     result = await this.ShardsMarket.settle(poolId, { from: account1, gas: 6000000 });
     console.log("settle:", result);
-    result = await this.ShardsMarket.redeemInSubscriptionFailed(poolId, { from: account2 });
-    console.log("redeemInSubscriptionFailed:", result);
-    result = await this.ShardsMarket.redeemInSubscriptionFailed(poolId, { from: account3 });
-    console.log("redeemInSubscriptionFailed:", result);
+
     result = await this.ShardsMarket.setDeadlineForRedeem(604800, { from: accountAdmin });
     console.log("setDeadlineForRedeem:", result);
 
@@ -163,8 +153,7 @@ module.exports = async function (callback) {
     console.log("creatorWithdrawWantToken:", result);
     result = await this.ShardsMarket.usersWithdrawShardToken(poolId, { from: account2 });
     console.log("usersWithdrawShardToken:", result);
-    result = await this.ShardsMarket.usersWithdrawShardToken(poolId, { from: account3 });
-    console.log("usersWithdrawShardToken:", result);
+
 
     shardInfo = await this.ShardsMarket.shardInfo.call(poolId);
     console.log("ShardToken:", shardInfo[2]);
@@ -179,7 +168,7 @@ module.exports = async function (callback) {
     console.log("applyForBuyout", result);
     result = await this.ShardsMarket.setDeadlineForRedeem(604800, { from: accountAdmin });
     console.log("setDeadlineForRedeem:", result);
-    // //买断申请(买断成功)
+    // //买断申请(买断失败)
     console.log("买断申请(买断失败):");
     tokenId++;
     console.log("tokenId:", tokenId);
@@ -232,8 +221,6 @@ module.exports = async function (callback) {
     sleep(11000);
     result = await this.ShardsMarket.voteResultConfirm(poolId);
     console.log("voteResultConfirm:", result);
-    result = await this.ShardsMarket.redeemForBuyoutFailed(2, { from: account2 });
-    console.log("redeemForBuyoutFailed:", result);
 
     //买断申请(成功)
     console.log("买断申请(成功):");
